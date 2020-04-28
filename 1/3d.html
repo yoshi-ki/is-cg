@@ -1,0 +1,235 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+<title id="title">[utokyo-iscg-2020] Basic Assignment Task4 (3d-bezier)</title>
+<script src="https://cdn.rawgit.com/toji/gl-matrix/v3.3.0/dist/gl-matrix.js"></script>
+<script src="https://legacygl-js.glitch.me/gl-matrix-util.js"></script>
+<script src="https://legacygl-js.glitch.me/legacygl.js"></script>
+<script src="https://legacygl-js.glitch.me/drawutil.js"></script>
+<script src="https://legacygl-js.glitch.me/camera.js"></script>
+<script src="https://legacygl-js.glitch.me/util.js"></script>
+<script src="https://legacygl-js.glitch.me/glu.js"></script>
+<script type="text/javascript">
+var gl;
+var canvas;
+var legacygl;
+var drawutil;
+var camera;
+var p0, p1, p2, p3, p4,p5 ,p6,p7,p8,p9,p10,p11,p12,p13,p14,p15;
+var selected = null
+var pointsarray;
+  
+function barstain(i,t){
+  if(i == 0){
+    return (1-t) * (1-t) * (1-t);
+  }
+  if(i == 1){
+    return 3 * t * (1-t) * (1-t);
+  }
+  if(i == 2){
+    return 3 * (1-t) * t * t;
+  }
+  if(i == 3){
+    return t * t * t;
+  }
+}
+
+function eval_bezier(pointarray, s, t) {
+  var temp = [0,0,0];
+  //console.log(pointarray);
+  for(var i = 0; i < 4; ++i){
+    for(var j = 0; j < 4; ++j){
+      temp[0] = barstain(i,s) * barstain(j,t) * pointarray[i*4 + j][0] + temp[0];
+      temp[1] = barstain(i,s) * barstain(j,t) * pointarray[i*4 + j][1] + temp[1];
+      temp[2] = barstain(i,s) * barstain(j,t) * pointarray[i*4 + j][2] + temp[2];
+      //temp = vec3.scaleAnd_ip(vec3.scale([],barstain(i,s) * barstain(i,t), pointarray[i*4 + j]), 1, temp)
+    }
+  }
+  console.log(temp);
+  return temp;
+}
+
+function draw() {
+    gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+    // projection & camera position
+    mat4.perspective(legacygl.uniforms.projection.value, Math.PI / 6, canvas.aspect_ratio(), 0.1, 1000);
+    var modelview = legacygl.uniforms.modelview;
+    camera.lookAt(modelview.value);
+    
+    // zx grid
+    gl.lineWidth(1);
+    legacygl.color(0.5, 0.5, 0.5);
+    drawutil.zxgrid(50);
+    
+    if (document.getElementById("input_show_controlpoints").checked) {
+        legacygl.color(0.2, 0.5, 1);
+        //一方向の描画
+        for(var i = 0; i < 4; ++i){
+          legacygl.begin(gl.LINE_STRIP);
+          for(var j = 0; j < 4; ++j){
+            legacygl.vertex3(pointsarray[i*4+j]); 
+          }
+          legacygl.end();
+        }
+        //もう一方向の描画
+        for(var i = 0; i < 4; ++i){
+          legacygl.begin(gl.LINE_STRIP);
+          for(var j = 0; j < 4; ++j){
+            legacygl.vertex3(pointsarray[i+j*4]); 
+          }
+          legacygl.end();
+        }
+        legacygl.begin(gl.POINTS);
+        for(var i = 0; i < pointsarray.length; ++i){
+          legacygl.vertex3(pointsarray[i]);
+        }
+        legacygl.end();
+    }
+
+    //for drawing bezier curves
+    var numsteps = Number(document.getElementById("input_numsteps").value);
+    // draw line segments composing curve
+    for (var i = 0; i < numsteps; ++i) {
+      for (var j = 0; j < numsteps; ++j){
+        var s = i / numsteps;
+        var t = j / numsteps;
+        legacygl.color(1, 0.6, 0.2);
+        legacygl.begin(legacygl.QUADS);
+        legacygl.vertex3(eval_bezier(pointsarray, s, t)); 
+        legacygl.vertex3(eval_bezier(pointsarray, s, (j+1)/numsteps)); 
+        legacygl.vertex3(eval_bezier(pointsarray, (i+1)/numsteps, (j+1)/numsteps)); 
+        legacygl.vertex3(eval_bezier(pointsarray, (i+1)/numsteps, t)); 
+        legacygl.end();
+        //draw mesh
+        legacygl.color(0.3, 0.5, 0);
+        legacygl.begin(gl.LINE_STRIP);
+        legacygl.vertex3(eval_bezier(pointsarray, s, t)); 
+        legacygl.vertex3(eval_bezier(pointsarray, s, (j+1)/numsteps)); 
+        legacygl.vertex3(eval_bezier(pointsarray, (i+1)/numsteps, (j+1)/numsteps)); 
+        legacygl.vertex3(eval_bezier(pointsarray, (i+1)/numsteps, t)); 
+        legacygl.end();
+      }
+    }
+  
+};
+function init() {
+    // OpenGL context
+    canvas = document.getElementById("canvas");
+    gl = canvas.getContext("experimental-webgl");
+    if (!gl)
+        alert("Could not initialise WebGL, sorry :-(");
+    var vertex_shader_src = "\
+        attribute vec3 a_vertex;\
+        attribute vec3 a_color;\
+        varying vec3 v_color;\
+        uniform mat4 u_modelview;\
+        uniform mat4 u_projection;\
+        void main(void) {\
+            gl_Position = u_projection * u_modelview * vec4(a_vertex, 1.0);\
+            v_color = a_color;\
+            gl_PointSize = 5.0;\
+        }\
+        ";
+    var fragment_shader_src = "\
+        precision mediump float;\
+        varying vec3 v_color;\
+        void main(void) {\
+            gl_FragColor = vec4(v_color, 1.0);\
+        }\
+        ";
+    legacygl = get_legacygl(gl, vertex_shader_src, fragment_shader_src);
+    legacygl.add_uniform("modelview", "Matrix4f");
+    legacygl.add_uniform("projection", "Matrix4f");
+    legacygl.add_vertex_attribute("color", 3);
+    //vertex3の定義を行う
+    legacygl.vertex3 = function(p) {
+        this.vertex(p[0], p[1], p[2]);
+    };
+    drawutil = get_drawutil(gl, legacygl);
+    camera = get_camera(canvas.width);
+    camera.eye = [20, 10, 15];
+    p0 = [-8, 5, -5];
+    p1 = [-8, 4, -2];
+    p2 = [-8, 2, 2];
+    p3 = [-8, 1, 5];
+    p4 = [-2, 3, -5];
+    p5 = [-2, 3, -2];
+    p6 = [-2, -1, 2];
+    p7 = [-2, -2, 5];
+    p8 = [2, 1, -5];
+    p9 = [2, -3, -2];
+    p10 = [2, 2, 2];
+    p11 = [2, 0, 5];
+    p12 = [8, -3, -5];
+    p13 = [9, -1, -2];
+    p14 = [8, 0, 2];
+    p15 = [8, 3, 5];
+    pointsarray = [p0,p1,p2,p3,p4,p5,p6,p7,p8,p9,p10,p11,p12,p13,p14,p15];
+  
+    // event handlers
+    canvas.onmousedown = function(evt) {
+        var mouse_win = this.get_mousepos(evt);
+        camera.start_moving(mouse_win, evt.shiftKey ? "zoom" : evt.ctrlKey ? "pan" : "rotate");
+    };
+    canvas.onmousemove = function(evt) {
+        var mouse_win = this.get_mousepos(evt);
+        if (camera.is_moving()) {
+            camera.move(mouse_win);
+            draw();
+            return;
+        }
+    }
+    document.onmouseup = function (evt) {
+        if (camera.is_moving()) {
+            camera.finish_moving();
+            return;
+        }
+        selected = null;
+    };
+    // init OpenGL settings
+    gl.viewport(0, 0, canvas.width, canvas.height);
+    //　手前にあるものが手前に映るように
+    gl.enable(gl.DEPTH_TEST);
+    gl.clearColor(1, 1, 1, 1);
+};
+</script>
+</head>
+<body onload="init(); draw();">
+  <h2><a target="_blank" href="http://research.nii.ac.jp/~takayama/teaching/utokyo-iscg-2020/"><script type="text/javascript">document.write(document.getElementById("title").innerHTML);</script></a></h2>
+  <canvas id="canvas" width="640" height="480" style="border:1px solid #000000"></canvas>
+  <table>
+    <tr>
+      <td>Number of Steps:</td>
+      <td colspan="2"><input type="number" id="input_numsteps" onchange="draw();" step="1" min="2" value="20"></td>
+    </tr>
+    <tr>
+      <td>Show Control Points:</td>
+      <td colspan="2"><input type="checkbox" id="input_show_controlpoints" onchange="draw();" checked></td>
+    </tr>
+    <tr>
+      <td>Show Sample Points:</td>
+      <td colspan="2"><input type="checkbox" id="input_show_samplepoints" onchange="draw();" checked></td>
+    </tr>
+  </table>
+  <h3>Usage:</h3>
+  <ul>
+    <li>Alt+Drag: Camera move</li>
+    <li>Shift+drag: Camera Zoom</li>
+  </ul>
+  
+  <h3>
+    説明・考察
+  </h3>
+  
+  ここでは３d空間上でベジェ曲面の実装を行った。先に16点を固定して動かした。
+  曲面の描画はeval_bezier関数で行った。また、引数の計算の補助のため、Barstain関数も別で定義している。
+  曲面はスライドに習い、メッシュとなるように線も描画している。
+  曲面の描画については順番が大切であるのでそこに注意して実装を行った。
+  
+
+  <div class="glitchButton" style="position:fixed;top:20px;right:20px;"></div>
+  <script src="https://button.glitch.me/button.js"></script>
+</body>
+</html>
+
