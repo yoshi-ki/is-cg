@@ -37,6 +37,24 @@ struct Intersection{
 };
 
 
+void intersectSphere(Ray R, Sphere S, inout Intersect I){
+    	vec3  a = R.origin - S.center;
+    	float b = dot(a, R.direction);
+    	float c = dot(a, a) - (S.radius * S.radius);
+    	float d = dot(R.direction, R.direction);
+    	float e = b * b - d * c;
+	float t = (-b - sqrt(e))/d;
+    	if(e > 0.0 && t > 0.0 && t < I.distance){
+		I.hit = true;
+		I.hitpoint = R.origin + t * R.direction;
+		I.normal = normalize(I.hitpoint - S.center);
+		float f = clamp(dot(normalize(vec3(1.0)), I.normal), 0.1, 1.0);
+		I.color = S.color * f;
+		I.distance = t;
+			
+	}
+}
+
 void intersection_sphere(Ray ray, Sphere sphere, inout Intersection inter){
   //交点があるかどうかを求める
   //二次方程式の部分をat^2 + bt + cとして変数をおく
@@ -49,37 +67,15 @@ void intersection_sphere(Ray ray, Sphere sphere, inout Intersection inter){
   if(t > 0.0 && t < inter.dist){
     //交点があった場合
     //struct intersectionを更新
-    inter.point = ray.ori + ray.dir;
+    inter.point = ray.ori + t * ray.dir;
     inter.norm = normalize(inter.point - sphere.cen);
-    inter.col = sphere.col;
+    float d = clamp(dot(inter.norm, lightDir), 0.1, 1.0);
+    inter.col = sphere.col * d;
   }
   return ;
 }
 
-// void intersectPlane(Ray R, Plane P, inout Intersect I){
-	
-// 	float d = dot(R.origin, P.normal);
-//     	float v = dot(R.direction, P.normal);
-//     	float t = 0.0;
-//         if(v != 0.0){
-// 		t = -d/v;
-//         }
-	
-// 	if(t > 0.0 && t < I.distance){
-// 		I.hit = true;
-// 		I.hitpoint = R.origin + t * R.direction;
-// 		I.normal = P.normal;
-// 		float d = clamp(dot(normalize(vec3(1.0)), I.normal), 0.1, 1.0);
-//         	float m = mod(I.hitpoint.x, 2.0);
-//         	float n = mod(I.hitpoint.z, 2.0);
-//         	if((m > 1.0 && n > 1.0) || (m < 1.0 && n < 1.0)){
-//             		d *= 0.5;
-//         	}
-//         	I.color = P.color * d;
-// 		I.distance = t;
-// 	}
 
-// }
 
 void intersection_plane(Ray ray, Plane plane, inout Intersection inter){
   //ここでは平面を描画する
@@ -94,13 +90,14 @@ void intersection_plane(Ray ray, Plane plane, inout Intersection inter){
     //clampで0-1の範囲に収めている
     //lightの方向との内積をとる
     float d = clamp(dot(inter.norm, lightDir), 0.1, 1.0);
-    float m = mod(i.point.x, 2.0);
-    float n = mod(i.point.z, 2.0);
+    float m = mod(inter.point.x, 5.0);
+    float n = mod(inter.point.z, 5.0);
     if((m > 1.0 && n > 1.0) || (m < 1.0 && n < 1.0)){
+      //こうすることでメッシュを描画する（このif文の中身にはいるとメッシュの色の濃い部分を描画する）
       d *= 0.5;
     }
     float f = 1.0 - min(abs(inter.point.z), 25.0) * 0.04;
-    inter.col += plane.col * d * f * pow(0.3,inter.hit);
+    inter.col += plane.col * d ;
     inter.dist = t;
     inter.hit++;
     inter.rayDir = ray.dir;
@@ -118,12 +115,16 @@ void main( void ) {
   // Ray の定義
   float rotspeed = 0.1;
   Ray ray;
-  ray.ori = vec3(sin(time*rotspeed)*10.0, 2.0,cos(time*rotspeed)*10.0);
-  //ray.dir = normalize(vec3(pos.x, pos.y, -1.0));
-  ray.dir = normalize(-ray.ori+vec3(cos(time*rotspeed),0.0,-sin(time*rotspeed))*pos.x*5.0 +vec3(0.0, 1.0, 0.0)*pos.y*5.0);
+  //固定のrayの設定を行う
+  ray.ori = vec3(10.0, 2.0,.0);
+  ray.dir = normalize(-ray.ori+vec3(0.0, 0.0, -1.0) *pos.x*(-5.0) +vec3(0.0, 1.0, 0.0)*pos.y*5.0);
+
+  //回転するようなrayの設定を行う
+  // ray.ori = vec3(sin(time*rotspeed)*10.0, 2.0,cos(time*rotspeed)*10.0);
+  // ray.dir = normalize(-ray.ori+vec3(cos(time*rotspeed),0.0,-sin(time*rotspeed))*pos.x*5.0 +vec3(0.0, 1.0, 0.0)*pos.y*5.0);
 
   //Sphereの定義
-  Sphere sphere = Sphere(1.0, vec3(-1.0,0.0,-1.0),vec3(1.0,1.0,1.0));
+  Sphere sphere = Sphere(2.0, vec3(-1.0,0.0,-1.0),vec3(0.,0.8,23.3));
 
   //planeの定義
   Plane plane = Plane(vec3(0.0,-1.0,0.0), vec3(0.0,1.0,0.0), vec3(1.0));
