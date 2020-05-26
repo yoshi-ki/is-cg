@@ -8,7 +8,7 @@ uniform float time;
 uniform vec2 mouse;
 uniform vec2 resolution;
 
-const vec3 lightDir = vec3(0.577);
+const vec3 lightDir = vec3(0.777);
 
 struct Ray{
   vec3 ori; //始点
@@ -37,24 +37,6 @@ struct Intersection{
 };
 
 
-void intersectSphere(Ray R, Sphere S, inout Intersect I){
-    	vec3  a = R.origin - S.center;
-    	float b = dot(a, R.direction);
-    	float c = dot(a, a) - (S.radius * S.radius);
-    	float d = dot(R.direction, R.direction);
-    	float e = b * b - d * c;
-	float t = (-b - sqrt(e))/d;
-    	if(e > 0.0 && t > 0.0 && t < I.distance){
-		I.hit = true;
-		I.hitpoint = R.origin + t * R.direction;
-		I.normal = normalize(I.hitpoint - S.center);
-		float f = clamp(dot(normalize(vec3(1.0)), I.normal), 0.1, 1.0);
-		I.color = S.color * f;
-		I.distance = t;
-			
-	}
-}
-
 void intersection_sphere(Ray ray, Sphere sphere, inout Intersection inter){
   //交点があるかどうかを求める
   //二次方程式の部分をat^2 + bt + cとして変数をおく
@@ -71,6 +53,7 @@ void intersection_sphere(Ray ray, Sphere sphere, inout Intersection inter){
     inter.norm = normalize(inter.point - sphere.cen);
     float d = clamp(dot(inter.norm, lightDir), 0.1, 1.0);
     inter.col = sphere.col * d;
+    inter.dist = t;
   }
   return ;
 }
