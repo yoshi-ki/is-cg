@@ -20,6 +20,13 @@ struct Sphere{
   vec3 cen;
   vec3 col;
 };
+struct Ellipse{
+  //焦点がa,bでそこからの距離の和がrであるような楕円
+  float r;
+  vec3 a;
+  vec3 b;
+  vec3 col;
+};
 //平面
 struct Plane{
   vec3 pos;
@@ -28,12 +35,10 @@ struct Plane{
 };
 //交点
 struct Intersection{
-  vec3 point;
-  vec3 norm;
-  vec3 col;
-  float dist;
-  int hit;
-  vec3 rayDir;
+  vec3 point; //rayと物体の交点の座標
+  vec3 norm; //法線ベクトル
+  vec3 col; //color
+  float dist; //distance (これがないと、物体の前後関係がわからない)
 };
 
 
@@ -58,6 +63,36 @@ void intersection_sphere(Ray ray, Sphere sphere, inout Intersection inter){
   return ;
 }
 
+void intersection_ellipse(Ray ray, Ellipse ellipse, inout Intersection inter){
+  //交点があるかどうかを求める
+  //二次方程式の部分をat^2 + bt + cとして変数をおく
+  //ただし今回はvector{d}が正規化されていると考えて、a = 1である
+  float a = 4.0 * dot(ray.dir,(ellipse.a - ellipse.b)) * dot(ray.dir,(ellipse.a - ellipse.b))
+            - 4.0 * ellipse.r * ellipse.r * dot(ray.dir,ray.dir);
+
+  float b = 4.0 * dot(ray.dir,(ellipse.a - ellipse.b)) *
+            (dot(ray.ori - ellipse.b, ray.ori - ellipse.b) - dot(ray.ori - ellipse.a, ray.ori - ellipse.a) + ellipse.r * ellipse.r)
+            - 4.0 * ellipse.r * ellipse.r * 2.0 * dot(ray.dir,(ray.ori - ellipse.b));
+
+  float c = (dot(ray.ori - ellipse.b, ray.ori - ellipse.b) - dot(ray.ori - ellipse.a, ray.ori - ellipse.a) + ellipse.r * ellipse.r) *
+            (dot(ray.ori - ellipse.b, ray.ori - ellipse.b) - dot(ray.ori - ellipse.a, ray.ori - ellipse.a) + ellipse.r * ellipse.r)
+            - 4.0 * ellipse.r * ellipse.r * dot(ray.ori - ellipse.b, ray.ori - ellipse.b);
+
+  float d = b * b - 4.0 * a * c;
+  float t = 0.0;
+  if(d > 0.0) t = -(b + sqrt(d))/ (2.0 * a);
+  if(t > 0.0 && t < inter.dist){
+    //交点があった場合
+    //struct intersectionを更新
+    inter.point = ray.ori + t * ray.dir;
+    //TODO: ここは変えなきゃやばいよー
+    inter.norm = normalize(inter.point - (ellipse.b + ellipse.a)/2.0);
+    float d = clamp(dot(inter.norm, lightDir), 0.1, 1.0);
+    inter.col = ellipse.col * d;
+    inter.dist = t;
+  }
+  return ;
+}
 
 
 void intersection_plane(Ray ray, Plane plane, inout Intersection inter){
@@ -82,8 +117,6 @@ void intersection_plane(Ray ray, Plane plane, inout Intersection inter){
     float f = 1.0 - min(abs(inter.point.z), 25.0) * 0.04;
     inter.col += plane.col * d ;
     inter.dist = t;
-    inter.hit++;
-    inter.rayDir = ray.dir;
   }
 
   return ;
@@ -106,19 +139,26 @@ void main( void ) {
   // ray.ori = vec3(sin(time*rotspeed)*10.0, 2.0,cos(time*rotspeed)*10.0);
   // ray.dir = normalize(-ray.ori+vec3(cos(time*rotspeed),0.0,-sin(time*rotspeed))*pos.x*5.0 +vec3(0.0, 1.0, 0.0)*pos.y*5.0);
 
+  //ray.ori = vec3(sin(mouse.x*rotspeed)*10.0, 2.0,cos(mouse*rotspeed)*10.0);
+  //ray.dir = normalize(-ray.ori+vec3(cos(mouse.x*rotspeed),0.0,-sin(mouse.x*rotspeed))*pos.x*5.0 +vec3(0.0, 1.0, 0.0)*pos.y*5.0);
+
+
   //Sphereの定義
   Sphere sphere = Sphere(2.0, vec3(-1.0,0.0,-1.0),vec3(0.,0.8,23.3));
 
   //planeの定義
   Plane plane = Plane(vec3(0.0,-1.0,0.0), vec3(0.0,1.0,0.0), vec3(1.0));
 
+  Ellipse ellipse = Ellipse(4.0, vec3(-1.0,0.0,3.0),vec3(-1.0,0.0,6.0),vec3(0.,0.8,23.3));
+
   //intersectionの定義
-  Intersection inter = Intersection(vec3(0.0),vec3(0.0),vec3(0.0),1.0e30,0,vec3(0.0));
+  Intersection inter = Intersection(vec3(0.0),vec3(0.0),vec3(0.0),1.0e30);
 
 
   //sphereとのintersectionの計算
   intersection_sphere(ray,sphere,inter);
   intersection_plane(ray,plane,inter);
+  intersection_ellipse(ray,ellipse,inter);
 
   //planeとのintersectionの計算
 
