@@ -33,6 +33,13 @@ struct Plane{
   vec3 norm;
   vec3 col;
 };
+struct Cylinder{
+  float r;
+  float h;
+  vec3 center;
+  vec3 norm;
+  vec3 col; //color
+};
 //交点
 struct Intersection{
   vec3 point; //rayと物体の交点の座標
@@ -126,6 +133,71 @@ void intersection_plane(Ray ray, Plane plane, inout Intersection inter){
   return ;
 }
 
+vec3 rotate(vec3 p, vec3 axis, float s, float c){
+  //axisの軸に対して、vec3 pを角度angle分回転させる関数
+    vec3 a = normalize(axis);
+    //float s = sin(angle);
+    //float c = cos(angle);
+    float r = 1.0 - c;
+    mat3 m = mat3(
+        a.x * a.x * r + c,
+        a.y * a.x * r + a.z * s,
+        a.z * a.x * r - a.y * s,
+        a.x * a.y * r - a.z * s,
+        a.y * a.y * r + c,
+        a.z * a.y * r + a.x * s,
+        a.x * a.z * r + a.y * s,
+        a.y * a.z * r - a.x * s,
+        a.z * a.z * r + c
+    );
+    return m * p;
+}
+
+void intersection_cylinder(Ray ray, Cylinder cylinder, inout Intersection inter){
+  /*
+  struct Cylinder{
+    float r;
+    float h;
+    vec3 center;
+    vec3 norm;
+    vec3 col; //color
+  };
+  */
+  //at^2+bt+cとして定義する
+  float t = 100000000.0;
+  float a = ray.dir[0] * ray.dir[0] + ray.dir[1] * ray.dir[1];
+  float b = 2.0 * (ray.dir[0] * ray.ori[0] + ray.dir[1] * ray.ori[1]);
+  float c = ray.ori[0] * ray.ori[0] + ray.ori[1] * ray.ori[1] - cylinder.r * cylinder.r;
+  float tempt = (-b - sqrt(b * b - 4.0 * a * c))/ (2.0 * a);
+  float tempt2 = (cylinder.h - ray.ori[2]) / ray.dir[2];
+  float tempt3 = - ray.ori[2] / ray.dir[2];
+  if(tempt > 0. && ray.ori[2] + ray.dir[2] * tempt < cylinder.h && ray.ori[2] + ray.dir[2] * tempt > 0.) t = min(t,tempt);
+  if(tempt2 > 0. && pow((ray.ori[0] + tempt2 * ray.dir[0]),2.0) + pow((ray.ori[1] + tempt2 * ray.dir[1]),2.0) < cylinder.r * cylinder.r) t = min(t,tempt2);
+  if(tempt3 > 0. && pow((ray.ori[0] + tempt3 * ray.dir[0]),2.0) + pow((ray.ori[1] + tempt3 * ray.dir[1]),2.0) < cylinder.r * cylinder.r) t = min(t,tempt3);
+  if(t < 100000000.0){
+    //交点があった場合
+    inter.point = ray.ori + t * ray.dir;
+    inter.col = cylinder.col;
+  }
+
+
+  // float b = dot(ray.ori-sphere.cen, ray.dir);
+  // float c = dot(ray.ori-sphere.cen,ray.ori-sphere.cen) - (sphere.r * sphere.r);
+  // float d = b * b - c;
+  // float t = 0.0;
+  // if(d > 0.0) t = -(b + sqrt(d));
+  // if(t > 0.0 && t < inter.dist){
+  //   //交点があった場合
+  //   //struct intersectionを更新
+  //   inter.point = ray.ori + t * ray.dir;
+  //   inter.norm = normalize(inter.point - sphere.cen);
+  //   float d = clamp(dot(inter.norm, lightDir), 0.1, 1.0);
+  //   inter.col = sphere.col * d;
+  //   inter.dist = t;
+  // }
+  return ;
+}
+
 
 void main( void ) {
 
@@ -155,6 +227,17 @@ void main( void ) {
 
   Ellipse ellipse = Ellipse(4.0, vec3(-1.0,0.0,3.0),vec3(-1.0,0.0,6.0),vec3(0.,0.8,23.3));
 
+  Cylinder cylinder = Cylinder(1.0,3.0,vec3(-1.0,0.0,2.0),vec3(0.0,0.0,1.0),vec3(0.,0.8,23.3));
+  /*
+  struct Cylinder{
+    float r;
+    float h;
+    vec3 center;
+    vec3 norm;
+    vec3 col; //color
+  };
+  */
+
   //intersectionの定義
   Intersection inter = Intersection(vec3(0.0),vec3(0.0),vec3(0.0),1.0e30);
 
@@ -163,6 +246,7 @@ void main( void ) {
   intersection_sphere(ray,sphere,inter);
   intersection_plane(ray,plane,inter);
   intersection_ellipse(ray,ellipse,inter);
+  intersection_cylinder(ray,cylinder,inter);
 
   //planeとのintersectionの計算
 
