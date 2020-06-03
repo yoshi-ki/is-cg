@@ -80,13 +80,17 @@ void intersection_ellipse(Ray ray, Ellipse ellipse, inout Intersection inter){
 
   float d = b * b - 4.0 * a * c;
   float t = 0.0;
-  if(d > 0.0) t = -(b + sqrt(d))/ (2.0 * a);
+  if(d > 0.0) t = -(b - sqrt(d))/ (2.0 * a);
   if(t > 0.0 && t < inter.dist){
     //交点があった場合
     //struct intersectionを更新
     inter.point = ray.ori + t * ray.dir;
     //TODO: ここは変えなきゃやばいよー
-    inter.norm = normalize(inter.point - (ellipse.b + ellipse.a)/2.0);
+    float a2 = ellipse.r / 2.0;
+    float b2 = sqrt((ellipse.r/2.0) * (ellipse.r/2.0) - ((ellipse.a[2] - ellipse.b[2])/2.0) * ((ellipse.a[2] - ellipse.b[2])/2.0));
+    vec3 nor = inter.point - (ellipse.b + ellipse.a)/2.0;
+    inter.norm = normalize(vec3(nor[0]*a2,nor[1]*a2,nor[2]*b2));
+    inter.norm = normalize(nor);
     float d = clamp(dot(inter.norm, lightDir), 0.1, 1.0);
     inter.col = ellipse.col * d;
     inter.dist = t;
