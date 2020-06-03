@@ -92,7 +92,6 @@ void intersection_ellipse(Ray ray, Ellipse ellipse, inout Intersection inter){
     //交点があった場合
     //struct intersectionを更新
     inter.point = ray.ori + t * ray.dir;
-    //TODO: ここは変えなきゃやばいよー
     float a2 = ellipse.r / 2.0;
     float b2 = sqrt((ellipse.r/2.0) * (ellipse.r/2.0) - ((ellipse.a[2] - ellipse.b[2])/2.0) * ((ellipse.a[2] - ellipse.b[2])/2.0));
     vec3 nor = inter.point - (ellipse.b + ellipse.a)/2.0;
@@ -164,6 +163,17 @@ void intersection_cylinder(Ray ray, Cylinder cylinder, inout Intersection inter)
   };
   */
   //at^2+bt+cとして定義する
+  //原点中心、高さhの円柱として見ている
+  //TODO: あとは回転させるだけ
+  /*回転操作 + 平行移動
+  //まず平行移動
+  vec3 ori = ray.ori - cylinder.center;
+
+  //次に回転移動
+
+
+
+  */
   float t = 100000000.0;
   float a = ray.dir[0] * ray.dir[0] + ray.dir[1] * ray.dir[1];
   float b = 2.0 * (ray.dir[0] * ray.ori[0] + ray.dir[1] * ray.ori[1]);
@@ -177,24 +187,26 @@ void intersection_cylinder(Ray ray, Cylinder cylinder, inout Intersection inter)
   if(t < 100000000.0){
     //交点があった場合
     inter.point = ray.ori + t * ray.dir;
-    inter.col = cylinder.col;
+    //交点の場所によって法線ベクトルの場合わけを行う
+    if(t == tempt){
+      //円柱の側面の場合
+      inter.norm = normalize(inter.point - vec3(0.0,0.0,inter.point[2]));
+    }
+    else if(t == tempt2){
+      inter.norm = vec3(0.0,0.0,1.0);
+    }
+    else{
+      inter.norm = vec3(0.0,0.0,-1.0);
+    }
+    float d = clamp(dot(inter.norm, lightDir), 0.1, 1.0);
+    inter.col = cylinder.col * d;
+    /*逆回転操作
+    //回転操作
+
+
+
+    */
   }
-
-
-  // float b = dot(ray.ori-sphere.cen, ray.dir);
-  // float c = dot(ray.ori-sphere.cen,ray.ori-sphere.cen) - (sphere.r * sphere.r);
-  // float d = b * b - c;
-  // float t = 0.0;
-  // if(d > 0.0) t = -(b + sqrt(d));
-  // if(t > 0.0 && t < inter.dist){
-  //   //交点があった場合
-  //   //struct intersectionを更新
-  //   inter.point = ray.ori + t * ray.dir;
-  //   inter.norm = normalize(inter.point - sphere.cen);
-  //   float d = clamp(dot(inter.norm, lightDir), 0.1, 1.0);
-  //   inter.col = sphere.col * d;
-  //   inter.dist = t;
-  // }
   return ;
 }
 
