@@ -162,28 +162,40 @@ void intersection_cylinder(Ray ray, Cylinder cylinder, inout Intersection inter)
     vec3 col; //color
   };
   */
-  //at^2+bt+cとして定義する
-  //原点中心、高さhの円柱として見ている
   //TODO: あとは回転させるだけ
-  /*回転操作 + 平行移動
+  
+  //回転操作 + 平行移動
   //まず平行移動
   vec3 ori = ray.ori - cylinder.center;
 
   //次に回転移動
+  vec3 axis = vec3(cylinder.norm[1],-cylinder.norm[0],0.0); //normに直交するz成分が0のベクトルを軸として回転すればいいのでそれを定義
+  vec3 dir = rotate(ray.dir,axis,sqrt(1.0-pow(cylinder.norm[2],2.0)),cylinder.norm[2]);
 
-
-
-  */
   float t = 100000000.0;
-  float a = ray.dir[0] * ray.dir[0] + ray.dir[1] * ray.dir[1];
-  float b = 2.0 * (ray.dir[0] * ray.ori[0] + ray.dir[1] * ray.ori[1]);
-  float c = ray.ori[0] * ray.ori[0] + ray.ori[1] * ray.ori[1] - cylinder.r * cylinder.r;
+  float a = dir[0] * dir[0] + dir[1] * dir[1];
+  float b = 2.0 * (dir[0] * ori[0] + dir[1] * ori[1]);
+  float c = ori[0] * ori[0] + ori[1] * ori[1] - cylinder.r * cylinder.r;
   float tempt = (-b - sqrt(b * b - 4.0 * a * c))/ (2.0 * a);
-  float tempt2 = (cylinder.h - ray.ori[2]) / ray.dir[2];
-  float tempt3 = - ray.ori[2] / ray.dir[2];
-  if(tempt > 0. && ray.ori[2] + ray.dir[2] * tempt < cylinder.h && ray.ori[2] + ray.dir[2] * tempt > 0.) t = min(t,tempt);
-  if(tempt2 > 0. && pow((ray.ori[0] + tempt2 * ray.dir[0]),2.0) + pow((ray.ori[1] + tempt2 * ray.dir[1]),2.0) < cylinder.r * cylinder.r) t = min(t,tempt2);
-  if(tempt3 > 0. && pow((ray.ori[0] + tempt3 * ray.dir[0]),2.0) + pow((ray.ori[1] + tempt3 * ray.dir[1]),2.0) < cylinder.r * cylinder.r) t = min(t,tempt3);
+  float tempt2 = (cylinder.h - ori[2]) / dir[2];
+  float tempt3 = - ori[2] / dir[2];
+  if(tempt > 0. && ori[2] + dir[2] * tempt < cylinder.h && ori[2] + dir[2] * tempt > 0.) t = min(t,tempt);
+  if(tempt2 > 0. && pow((ori[0] + tempt2 * dir[0]),2.0) + pow((ori[1] + tempt2 * dir[1]),2.0) < cylinder.r * cylinder.r) t = min(t,tempt2);
+  if(tempt3 > 0. && pow((ori[0] + tempt3 * dir[0]),2.0) + pow((ori[1] + tempt3 * dir[1]),2.0) < cylinder.r * cylinder.r) t = min(t,tempt3);
+
+  
+  //at^2+bt+cとして定義する
+  //この時点では原点中心、高さhの円柱として見ている
+  // float t = 100000000.0;
+  // float a = ray.dir[0] * ray.dir[0] + ray.dir[1] * ray.dir[1];
+  // float b = 2.0 * (ray.dir[0] * ray.ori[0] + ray.dir[1] * ray.ori[1]);
+  // float c = ray.ori[0] * ray.ori[0] + ray.ori[1] * ray.ori[1] - cylinder.r * cylinder.r;
+  // float tempt = (-b - sqrt(b * b - 4.0 * a * c))/ (2.0 * a);
+  // float tempt2 = (cylinder.h - ray.ori[2]) / ray.dir[2];
+  // float tempt3 = - ray.ori[2] / ray.dir[2];
+  // if(tempt > 0. && ray.ori[2] + ray.dir[2] * tempt < cylinder.h && ray.ori[2] + ray.dir[2] * tempt > 0.) t = min(t,tempt);
+  // if(tempt2 > 0. && pow((ray.ori[0] + tempt2 * ray.dir[0]),2.0) + pow((ray.ori[1] + tempt2 * ray.dir[1]),2.0) < cylinder.r * cylinder.r) t = min(t,tempt2);
+  // if(tempt3 > 0. && pow((ray.ori[0] + tempt3 * ray.dir[0]),2.0) + pow((ray.ori[1] + tempt3 * ray.dir[1]),2.0) < cylinder.r * cylinder.r) t = min(t,tempt3);
   if(t < 100000000.0){
     //交点があった場合
     inter.point = ray.ori + t * ray.dir;
@@ -200,12 +212,16 @@ void intersection_cylinder(Ray ray, Cylinder cylinder, inout Intersection inter)
     }
     float d = clamp(dot(inter.norm, lightDir), 0.1, 1.0);
     inter.col = cylinder.col * d;
-    /*逆回転操作
+    
+    //逆回転操作
     //回転操作
+    //回転を行うべきは、inter.normとinter.pointだけ
+    inter.point = rotate(inter.point,axis,-sqrt(1.0-pow(cylinder.norm[2],2.0)),cylinder.norm[2]);
+    inter.point = inter.point + cylinder.center;
+    inter.col = cylinder.col;
 
 
-
-    */
+    
   }
   return ;
 }
@@ -239,7 +255,7 @@ void main( void ) {
 
   Ellipse ellipse = Ellipse(4.0, vec3(-1.0,0.0,3.0),vec3(-1.0,0.0,6.0),vec3(0.,0.8,23.3));
 
-  Cylinder cylinder = Cylinder(1.0,3.0,vec3(-1.0,0.0,2.0),vec3(0.0,0.0,1.0),vec3(0.,0.8,23.3));
+  Cylinder cylinder = Cylinder(1.0,3.0,vec3(-1.0,0.0,2.0),vec3(-1.0,0.0,1.0),vec3(0.,0.8,23.3));
   /*
   struct Cylinder{
     float r;
