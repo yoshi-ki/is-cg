@@ -40,6 +40,13 @@ struct Cylinder{
   vec3 norm;
   vec3 col; //color
 };
+struct Cone{
+  float h;
+  float theta;
+  vec3 center;
+  vec3 norm;
+  vec3 col;
+};
 //交点
 struct Intersection{
   vec3 point; //rayと物体の交点の座標
@@ -153,16 +160,6 @@ vec3 rotate(vec3 p, vec3 axis, float s, float c){
 }
 
 void intersection_cylinder(Ray ray, Cylinder cylinder, inout Intersection inter){
-  /*
-  struct Cylinder{
-    float r;
-    float h;
-    vec3 center;
-    vec3 norm;
-    vec3 col; //color
-  };
-  */
-  //TODO: あとは回転させるだけ
 
   //回転操作 + 平行移動
   //まず平行移動
@@ -209,7 +206,62 @@ void intersection_cylinder(Ray ray, Cylinder cylinder, inout Intersection inter)
     float d = clamp(dot(inter.norm, lightDir), 0.1, 1.0);
     inter.col = cylinder.col * d;
 
+  }
+  return ;
+}
 
+
+void intersection_cone(Ray ray, Cone cone, inout Intersection inter){
+  /*
+  struct Cone{
+    float h;
+    float theta;
+    vec3 center;
+    vec3 norm;
+    vec3 col;
+  };
+  */
+
+  //回転操作 + 平行移動
+  //まず平行移動
+  vec3 ori = ray.ori - cone.center;
+
+  //次に回転移動
+  vec3 axis = vec3(cone.norm[1],-cone.norm[0],0.0); //normに直交するz成分が0のベクトルを軸として回転すればいいのでそれを定義
+  ori = rotate(ori,axis,sqrt(1.0-pow(normalize(cone.norm)[2],2.0)),normalize(cone.norm)[2]);
+  vec3 dir = rotate(ray.dir,axis,sqrt(1.0-pow(normalize(cone.norm)[2],2.0)),normalize(cone.norm)[2]);
+
+  //at^2+bt+cとして定義する
+  //この時点では原点中心、高さhの円錐として見ている
+  float t = 100000000.0;
+  float a = pow(dir[0],2.0) + pow(dir[1],2.0) - pow(dir[2]*tan(cone.theta),2.0);
+  float b = 2.0 * (ori[0]*dir[0] + ori[1]*dir[1] + pow(tan(cone.theta),2.0) * dir[2] * (cone.h - ori[2]));
+  float c = ori[0] * ori[0] + ori[1] * ori[1] - pow(tan(cone.theta) * (cone.h - ori[2]),2.0);
+  float tempt;
+  if(a > 0.0) tempt = (-b - sqrt(b * b - 4.0 * a * c))/ (2.0 * a); else (-b + sqrt(b * b - 4.0 * a * c))/ (2.0 * a);
+  float tempt2 = - ori[2] / dir[2];
+  if(tempt > 0. && ori[2] + dir[2] * tempt < cone.h && ori[2] + dir[2] * tempt > 0.) t = min(t,tempt);
+  if(tempt2 > 0. && pow((ori[0] + tempt2 * dir[0]),2.0) + pow((ori[1] + tempt2 * dir[1]),2.0) < pow(tan(cone.theta) * cone.h,2.0)) t = min(t,tempt2);
+
+  if(t < 100000000.0){
+    //交点があった場合
+    inter.point = ori + t * dir;
+    //交点の場所によって法線ベクトルの場合わけを行う
+    if(t == tempt){
+      //円柱の側面の場合
+      inter.norm = normalize(inter.point - vec3(0.0,0.0,inter.point[2]));
+    }
+    else {
+      inter.norm = vec3(0.0,0.0,-1.0);
+    }
+
+    //逆回転操作
+    //回転操作
+    //回転を行うべきは、inter.normとinter.pointだけ
+    inter.point = rotate(inter.point,axis,-sqrt(1.0-pow(normalize(cone.norm)[2],2.0)),normalize(cone.norm)[2]) + cone.center;
+    inter.norm = rotate(inter.norm,axis,-sqrt(1.0-pow(normalize(cone.norm)[2],2.0)),normalize(cone.norm)[2]);
+    float d = clamp(dot(inter.norm, lightDir), 0.1, 1.0);
+    inter.col = cone.col * d;
 
   }
   return ;
@@ -245,14 +297,16 @@ void main( void ) {
   Ellipse ellipse = Ellipse(4.0, vec3(-1.0,0.0,3.0),vec3(-1.0,0.0,6.0),vec3(0.,0.8,23.3));
 
   Cylinder cylinder = Cylinder(1.0,5.0,vec3(-1.0,0.0,-1.0),vec3(0.0,1.0,1.0),vec3(0.,0.8,23.3));
+
+  Cone cone = Cone(3.0,0.4,vec3(-1.0,0.0,-3.0),vec3(1.0,0.0,1.0),vec3(0.0,0.8,23.3));
   /*
-  struct Cylinder{
-    float r;
-    float h;
-    vec3 center;
-    vec3 norm;
-    vec3 col; //color
-  };
+  struct Cone{
+  float h;
+  float theta;
+  vec3 center;
+  vec3 norm;
+  vec3 col;
+};
   */
 
   //intersectionの定義
@@ -264,6 +318,7 @@ void main( void ) {
   intersection_plane(ray,plane,inter);
   intersection_ellipse(ray,ellipse,inter);
   intersection_cylinder(ray,cylinder,inter);
+  intersection_cone(ray,cone,inter);
 
   //planeとのintersectionの計算
 
