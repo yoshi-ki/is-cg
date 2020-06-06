@@ -75,7 +75,7 @@ void intersection_sphere(Ray ray, Sphere sphere, inout Intersection inter){
   float d = b * b - c;
   float t = 0.0;
   if(d > 0.0) t = -(b + sqrt(d));
-  if(t > 0.0 && t < inter.dist){
+  if(t > eps && t < inter.dist){
     //交点があった場合
     //struct intersectionを更新
     inter.point = ray.ori + t * ray.dir;
@@ -107,7 +107,7 @@ void intersection_ellipse(Ray ray, Ellipse ellipse, inout Intersection inter){
   float d = b * b - 4.0 * a * c;
   float t = 0.0;
   if(d > 0.0) t = -(b - sqrt(d))/ (2.0 * a);
-  if(t > 0.0 && t < inter.dist){
+  if(t > eps && t < inter.dist){
     //交点があった場合
     //struct intersectionを更新
     inter.point = ray.ori + t * ray.dir;
@@ -145,7 +145,6 @@ void intersection_plane(Ray ray, Plane plane, inout Intersection inter){
       //こうすることでメッシュを描画する（このif文の中身にはいるとメッシュの色の濃い部分を描画する）
       d *= 0.5;
     }
-    float f = 1.0 - min(abs(inter.point.z), 25.0) * 0.04;
     inter.col += plane.col * d ;
     inter.dist = t;
     inter.hit = inter.hit + 1;
@@ -195,11 +194,11 @@ void intersection_cylinder(Ray ray, Cylinder cylinder, inout Intersection inter)
   float tempt = (-b - sqrt(b * b - 4.0 * a * c))/ (2.0 * a);
   float tempt2 = (cylinder.h - ori[2]) / dir[2];
   float tempt3 = - ori[2] / dir[2];
-  if(tempt > 0. && ori[2] + dir[2] * tempt < cylinder.h && ori[2] + dir[2] * tempt > 0.) t = min(t,tempt);
-  if(tempt2 > 0. && pow((ori[0] + tempt2 * dir[0]),2.0) + pow((ori[1] + tempt2 * dir[1]),2.0) < cylinder.r * cylinder.r) t = min(t,tempt2);
-  if(tempt3 > 0. && pow((ori[0] + tempt3 * dir[0]),2.0) + pow((ori[1] + tempt3 * dir[1]),2.0) < cylinder.r * cylinder.r) t = min(t,tempt3);
+  if(tempt > eps && ori[2] + dir[2] * tempt < cylinder.h && ori[2] + dir[2] * tempt > 0.) t = min(t,tempt);
+  if(tempt2 > eps && pow((ori[0] + tempt2 * dir[0]),2.0) + pow((ori[1] + tempt2 * dir[1]),2.0) < cylinder.r * cylinder.r) t = min(t,tempt2);
+  if(tempt3 > eps && pow((ori[0] + tempt3 * dir[0]),2.0) + pow((ori[1] + tempt3 * dir[1]),2.0) < cylinder.r * cylinder.r) t = min(t,tempt3);
 
-  if(t < 100000000.0){
+  if(t < 100000000.0 && t < inter.dist){
     //交点があった場合
     inter.point = ori + t * dir;
     //交点の場所によって法線ベクトルの場合わけを行う
@@ -250,10 +249,10 @@ void intersection_cone(Ray ray, Cone cone, inout Intersection inter){
   float tempt;
   if(a > 0.0) tempt = (-b - sqrt(b * b - 4.0 * a * c))/ (2.0 * a); else (-b + sqrt(b * b - 4.0 * a * c))/ (2.0 * a);
   float tempt2 = - ori[2] / dir[2];
-  if(tempt > 0. && ori[2] + dir[2] * tempt < cone.h && ori[2] + dir[2] * tempt > 0.) t = min(t,tempt);
-  if(tempt2 > 0. && pow((ori[0] + tempt2 * dir[0]),2.0) + pow((ori[1] + tempt2 * dir[1]),2.0) < pow(tan(cone.theta) * cone.h,2.0)) t = min(t,tempt2);
+  if(tempt > eps && ori[2] + dir[2] * tempt < cone.h && ori[2] + dir[2] * tempt > 0.) t = min(t,tempt);
+  if(tempt2 > eps && pow((ori[0] + tempt2 * dir[0]),2.0) + pow((ori[1] + tempt2 * dir[1]),2.0) < pow(tan(cone.theta) * cone.h,2.0)) t = min(t,tempt2);
 
-  if(t < 100000000.0){
+  if(t < 100000000.0 && t < inter.dist){
     //交点があった場合
     inter.point = ori + t * dir;
     //交点の場所によって法線ベクトルの場合わけを行う
@@ -307,7 +306,7 @@ void intersection_torus(Ray ray, Torus torus, inout Intersection inter){
   }
 
 
-  if(hit){
+  if(hit && t < inter.dist){
     //交点があった場合
     inter.point = ori + t * dir;
 
@@ -366,7 +365,6 @@ void main( void ) {
   //ray.ori = vec3(sin(mouse.x*rotspeed)*10.0, 2.0,cos(mouse*rotspeed)*10.0);
   //ray.dir = normalize(-ray.ori+vec3(cos(mouse.x*rotspeed),0.0,-sin(mouse.x*rotspeed))*pos.x*5.0 +vec3(0.0, 1.0, 0.0)*pos.y*5.0);
 
-
   //Sphereの定義
   sphere = Sphere(1.0, vec3(-1.0,0.0,-1.0),vec3(0.,0.8,23.3));
 
@@ -375,7 +373,7 @@ void main( void ) {
 
   ellipse = Ellipse(4.0, vec3(3.0,0.0,2.0),vec3(3.0,0.0,5.0),vec3(0.,0.8,23.3));
 
-  cylinder = Cylinder(1.0,5.0,vec3(-3.0,1.0,3.0),vec3(0.0,1.0,1.0),vec3(0.,0.8,23.3));
+  cylinder = Cylinder(0.7,3.0,vec3(-3.0,1.0,3.0),vec3(0.0,1.0,1.0),vec3(0.,0.8,23.3));
 
   cone = Cone(3.0,0.4,vec3(-1.0,0.0,-5.0),vec3(1.0,0.0,1.0),vec3(0.0,0.8,23.3));
 
