@@ -60,6 +60,8 @@ struct Intersection{
   vec3 norm; //法線ベクトル
   vec3 col; //color
   float dist; //distance (これがないと、物体の前後関係がわからない)
+  int hit;
+	vec3 rayDir;
 };
 
 
@@ -80,6 +82,8 @@ void intersection_sphere(Ray ray, Sphere sphere, inout Intersection inter){
     float d = clamp(dot(inter.norm, lightDir), 0.1, 1.0);
     inter.col = sphere.col * d;
     inter.dist = t;
+    inter.hit = inter.hit + 1;
+    inter.rayDir = ray.dir;
   }
   return ;
 }
@@ -114,6 +118,8 @@ void intersection_ellipse(Ray ray, Ellipse ellipse, inout Intersection inter){
     float d = clamp(dot(inter.norm, lightDir), 0.1, 1.0);
     inter.col = ellipse.col * d;
     inter.dist = t;
+    inter.hit = inter.hit + 1;
+    inter.rayDir = ray.dir;
   }
   return ;
 }
@@ -141,6 +147,8 @@ void intersection_plane(Ray ray, Plane plane, inout Intersection inter){
     float f = 1.0 - min(abs(inter.point.z), 25.0) * 0.04;
     inter.col += plane.col * d ;
     inter.dist = t;
+    inter.hit = inter.hit + 1;
+    inter.rayDir = ray.dir;
   }
 
   return ;
@@ -212,6 +220,9 @@ void intersection_cylinder(Ray ray, Cylinder cylinder, inout Intersection inter)
     inter.norm = rotate(inter.norm,axis,-sqrt(1.0-pow(normalize(cylinder.norm)[2],2.0)),normalize(cylinder.norm)[2]);
     float d = clamp(dot(inter.norm, lightDir), 0.1, 1.0);
     inter.col = cylinder.col * d;
+    inter.dist = t;
+    inter.hit = inter.hit + 1;
+    inter.rayDir = ray.dir;
 
   }
   return ;
@@ -260,6 +271,9 @@ void intersection_cone(Ray ray, Cone cone, inout Intersection inter){
     inter.norm = rotate(inter.norm,axis,-sqrt(1.0-pow(normalize(cone.norm)[2],2.0)),normalize(cone.norm)[2]);
     float d = clamp(dot(inter.norm, lightDir), 0.1, 1.0);
     inter.col = cone.col * d;
+    inter.dist = t;
+    inter.hit = inter.hit + 1;
+    inter.rayDir = ray.dir;
 
   }
   return ;
@@ -305,6 +319,9 @@ void intersection_torus(Ray ray, Torus torus, inout Intersection inter){
     inter.norm = rotate(inter.norm,axis,-sqrt(1.0-pow(normalize(torus.norm)[2],2.0)),normalize(torus.norm)[2]);
     float d = clamp(dot(inter.norm, lightDir), 0.1, 1.0);
     inter.col = torus.col * d;
+    inter.dist = t;
+    inter.hit = inter.hit + 1;
+    inter.rayDir = ray.dir;
 
   }
   return ;
@@ -331,18 +348,19 @@ void main( void ) {
 
 
   //Sphereの定義
-  Sphere sphere = Sphere(2.0, vec3(-1.0,0.0,-1.0),vec3(0.,0.8,23.3));
+  Sphere sphere = Sphere(1.0, vec3(-1.0,0.0,-1.0),vec3(0.,0.8,23.3));
 
   //planeの定義
   Plane plane = Plane(vec3(0.0,-1.0,0.0), vec3(0.0,1.0,0.0), vec3(1.0));
 
-  Ellipse ellipse = Ellipse(4.0, vec3(-1.0,0.0,3.0),vec3(-1.0,0.0,6.0),vec3(0.,0.8,23.3));
+  Ellipse ellipse = Ellipse(4.0, vec3(3.0,0.0,2.0),vec3(3.0,0.0,5.0),vec3(0.,0.8,23.3));
 
-  Cylinder cylinder = Cylinder(1.0,5.0,vec3(-1.0,0.0,-1.0),vec3(0.0,1.0,1.0),vec3(0.,0.8,23.3));
+  Cylinder cylinder = Cylinder(1.0,5.0,vec3(-3.0,1.0,3.0),vec3(0.0,1.0,1.0),vec3(0.,0.8,23.3));
 
-  Cone cone = Cone(3.0,0.4,vec3(-1.0,0.0,-3.0),vec3(1.0,0.0,1.0),vec3(0.0,0.8,23.3));
+  Cone cone = Cone(3.0,0.4,vec3(-1.0,0.0,-5.0),vec3(1.0,0.0,1.0),vec3(0.0,0.8,23.3));
 
-  Torus torus = Torus(5.0,1.0,vec3(0.0,0.0,0.0),vec3(0.0,1.0,1.0),vec3(0.0,0.8,23.3));
+  Torus torus = Torus(2.0,0.5,vec3(0.0,3.0,-3.0),vec3(0.7,1.0,1.0),vec3(0.0,0.8,23.3));
+
 
 
 
@@ -358,6 +376,25 @@ void main( void ) {
   intersection_cylinder(ray,cylinder,inter);
   intersection_cone(ray,cone,inter);
   intersection_torus(ray,torus,inter);
+
+  // hit check
+    vec3 destColor = vec3(ray.direction.y);
+    vec3 tempColor = vec3(1.0);
+    Ray q;
+    intersectExec(ray, its);
+    if(its.hit > 0){
+        destColor = its.color;
+        tempColor *= its.color;
+        for(int j = 1; j < MAX_REF; j++){
+            q.origin = its.hitPoint + its.normal * EPS;
+            q.direction = reflect(its.rayDir, its.normal);
+            intersectExec(q, its);
+            if(its.hit > 0){
+                destColor += tempColor * its.color;
+                tempColor *= its.color;
+            }
+        }
+    }
 
   //planeとのintersectionの計算
 
