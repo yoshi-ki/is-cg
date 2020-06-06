@@ -64,6 +64,7 @@ struct Intersection{
 	vec3 rayDir;
 };
 
+float eps = 0.0001;
 
 void intersection_sphere(Ray ray, Sphere sphere, inout Intersection inter){
   //交点があるかどうかを求める
@@ -127,19 +128,19 @@ void intersection_ellipse(Ray ray, Ellipse ellipse, inout Intersection inter){
 
 void intersection_plane(Ray ray, Plane plane, inout Intersection inter){
   //ここでは平面を描画する
-  float d = dot(ray.ori, plane.norm);
+  float d = -dot(plane.pos, plane.norm);
   float v = dot(ray.dir, plane.norm);
   float t = 0.0;
   if(v != 0.0) t = -(dot(ray.ori,plane.norm) + d)/v;
 
-  if(t > 0.0 && t < inter.dist && d > 0.0){
+  if(t > eps && t < inter.dist && d > 0.0){
     inter.point = ray.ori + ray.dir * t;
     inter.norm = plane.norm;
     //clampで0-1の範囲に収めている
     //lightの方向との内積をとる
     float d = clamp(dot(inter.norm, lightDir), 0.1, 1.0);
-    float m = mod(inter.point.x, 5.0);
-    float n = mod(inter.point.z, 5.0);
+    float m = mod(inter.point.x, 2.0);
+    float n = mod(inter.point.z, 2.0);
     if((m > 1.0 && n > 1.0) || (m < 1.0 && n < 1.0)){
       //こうすることでメッシュを描画する（このif文の中身にはいるとメッシュの色の濃い部分を描画する）
       d *= 0.5;
@@ -327,6 +328,25 @@ void intersection_torus(Ray ray, Torus torus, inout Intersection inter){
   return ;
 }
 
+Sphere sphere;
+Plane plane;
+Ellipse ellipse;
+Cylinder cylinder;
+Cone cone;
+Torus torus;
+
+void compute_intersection(Ray ray, inout Intersection inter){
+
+  intersection_sphere(ray,sphere,inter);
+  intersection_plane(ray,plane,inter);
+  //intersection_ellipse(ray,ellipse,inter);
+  //intersection_cylinder(ray,cylinder,inter);
+  //intersection_cone(ray,cone,inter);
+  //intersection_torus(ray,torus,inter);
+
+  return ;
+}
+
 void main( void ) {
 
   //vec2 pos = (fragCoord - 0.5*resolution.xy)/resolution.x;
@@ -348,71 +368,48 @@ void main( void ) {
 
 
   //Sphereの定義
-  Sphere sphere = Sphere(1.0, vec3(-1.0,0.0,-1.0),vec3(0.,0.8,23.3));
+  sphere = Sphere(1.0, vec3(-1.0,0.0,-1.0),vec3(0.,0.8,23.3));
 
   //planeの定義
-  Plane plane = Plane(vec3(0.0,-1.0,0.0), vec3(0.0,1.0,0.0), vec3(1.0));
+  plane = Plane(vec3(0.0,-1.0,0.0), vec3(0.0,1.0,0.0), vec3(1.0));
 
-  Ellipse ellipse = Ellipse(4.0, vec3(3.0,0.0,2.0),vec3(3.0,0.0,5.0),vec3(0.,0.8,23.3));
+  ellipse = Ellipse(4.0, vec3(3.0,0.0,2.0),vec3(3.0,0.0,5.0),vec3(0.,0.8,23.3));
 
-  Cylinder cylinder = Cylinder(1.0,5.0,vec3(-3.0,1.0,3.0),vec3(0.0,1.0,1.0),vec3(0.,0.8,23.3));
+  cylinder = Cylinder(1.0,5.0,vec3(-3.0,1.0,3.0),vec3(0.0,1.0,1.0),vec3(0.,0.8,23.3));
 
-  Cone cone = Cone(3.0,0.4,vec3(-1.0,0.0,-5.0),vec3(1.0,0.0,1.0),vec3(0.0,0.8,23.3));
+  cone = Cone(3.0,0.4,vec3(-1.0,0.0,-5.0),vec3(1.0,0.0,1.0),vec3(0.0,0.8,23.3));
 
-  Torus torus = Torus(2.0,0.5,vec3(0.0,3.0,-3.0),vec3(0.7,1.0,1.0),vec3(0.0,0.8,23.3));
-
-
-
+  torus = Torus(2.0,0.5,vec3(0.0,3.0,-3.0),vec3(0.7,1.0,1.0),vec3(0.0,0.8,23.3));
 
 
   //intersectionの定義
-  Intersection inter = Intersection(vec3(0.0),vec3(0.0),vec3(0.0),1.0e30);
+  Intersection inter = Intersection(vec3(0.0),vec3(0.0),vec3(0.0),1.0e30,0,vec3(0.0));
 
 
-  //sphereとのintersectionの計算
-  intersection_sphere(ray,sphere,inter);
-  intersection_plane(ray,plane,inter);
-  intersection_ellipse(ray,ellipse,inter);
-  intersection_cylinder(ray,cylinder,inter);
-  intersection_cone(ray,cone,inter);
-  intersection_torus(ray,torus,inter);
+  //intersectionの計算
+  compute_intersection(ray,inter);
 
   // hit check
-    vec3 destColor = vec3(ray.direction.y);
-    vec3 tempColor = vec3(1.0);
-    Ray q;
-    intersectExec(ray, its);
-    if(its.hit > 0){
-        destColor = its.color;
-        tempColor *= its.color;
-        for(int j = 1; j < MAX_REF; j++){
-            q.origin = its.hitPoint + its.normal * EPS;
-            q.direction = reflect(its.rayDir, its.normal);
-            intersectExec(q, its);
-            if(its.hit > 0){
-                destColor += tempColor * its.color;
-                tempColor *= its.color;
-            }
-        }
+  vec3 destCol = vec3(ray.dir.y);
+  vec3 tempCol = vec3(1.0);
+  Ray ray2;
+  if(inter.hit > 0){
+    destCol = inter.col;
+    tempCol *= inter.col;
+    for(int j = 1; j < 8; j++){
+      ray2.ori = inter.point;
+      ray2.dir = reflect(inter.rayDir, inter.norm);
+      compute_intersection(ray2, inter);
+      if(inter.hit > 0){
+        destCol += tempCol * inter.col;
+        tempCol *= inter.col;
+      }
     }
+  }
 
   //planeとのintersectionの計算
 
   gl_FragColor = vec4(inter.col, 1.0);
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 }
