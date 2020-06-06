@@ -265,18 +265,6 @@ void intersection_cone(Ray ray, Cone cone, inout Intersection inter){
   return ;
 }
 
-float quatic_equation(float a, float b, float c, float d){
-  //t^4 + at^3 + bt^2 + ct + d について解くことになっている
-
-  float ans = -0.1;
-
-  for(float i = 0.0; i < 100.0; i = i + 0.1){
-    if(abs(pow(i,4.0) + a * pow(i,3.0) + b * pow(i,2.0) + c * i + d - 0.0) < 0.01) {ans = i; break;}
-  }
-
-  return ans;
-}
-
 
 void intersection_torus(Ray ray, Torus torus, inout Intersection inter){
 
@@ -301,22 +289,21 @@ void intersection_torus(Ray ray, Torus torus, inout Intersection inter){
   vec3 dir = rotate(ray.dir,axis,sqrt(1.0-pow(normalize(torus.norm)[2],2.0)),normalize(torus.norm)[2]);
 
 
-  //TODO: 四次方程式を立てる
-  //at^4+bt^3+ct^2+dt+eとして定義する
   //この時点では原点中心、のtorusとして見ている
-  float t = 100000000.0;
-  float a = pow(pow(dir[0],2.0) + pow(dir[1],2.0) + pow(dir[2],2.0), 2.0);
-  float b = 4.0 * (pow(dir[0],2.0) + pow(dir[1],2.0) + pow(dir[2],2.0)) * (ori[0] * dir[0] + ori[1] * dir[1] + ori[2] * dir[2]);
-  float c = 2.0 * (pow(dir[0],2.0) + pow(dir[1],2.0) + pow(dir[2],2.0)) * (pow(ori[0],2.0) + pow(ori[1],2.0) + pow(ori[2],2.0) - pow(torus.r,2.0) - pow(torus.R,2.0))
-            + 4.0 * (pow(ori[0] * dir[0] + ori[1] * dir[1] + ori[2] * dir[2], 2.0)) + 4.0 * pow(torus.R,2.0) * pow(dir[1],2.0);
-  float d = 4.0 * (pow(ori[0],2.0) + pow(ori[1],2.0) + pow(ori[2],2.0) - pow(torus.r,2.0) - pow(torus.R,2.0)) * (ori[0] * dir[0] + ori[1] * dir[1] + ori[2] * dir[2])
-            + 8.0 * pow(torus.R,2.0) * ori[1] * dir[1];
-  float e = pow(pow(ori[0],2.0) + pow(ori[1],2.0) + pow(ori[2],2.0) - pow(torus.r,2.0) - pow(torus.R,2.0),2.0) - 4.0 * pow(torus.R,2.0) * (pow(torus.r,2.0) - pow(ori[1],2.0));
-  float tempt; 
-  if(a != 0.0) tempt = quatic_equation (b/a,c/a,d/a,e/a);
-  if(tempt > 0.) t = min(t,tempt);
+  float t = 0.01;
+  bool hit = false;
 
-  if(t < 100000000.0){
+  for(int i = 0; i < 100; i++){
+    //このループで交点に達する可動化を求める
+    //torus とのdistanceを求める
+    vec3 point = ori + t * dir;
+    float dist = sqrt( pow((sqrt(point[0]*point[0] + point[1]*point[1]) - (torus.R - torus.r)),2.0) + pow(point[2],2.0)) - torus.r;
+    if(dist < 0.0001) {hit = true; break;}
+    t = t + dist;
+  }
+
+
+  if(hit){
     //交点があった場合
     inter.point = ori + t * dir;
 
@@ -328,8 +315,7 @@ void intersection_torus(Ray ray, Torus torus, inout Intersection inter){
     //回転を行うべきは、inter.normとinter.pointだけ
     inter.point = rotate(inter.point,axis,-sqrt(1.0-pow(normalize(torus.norm)[2],2.0)),normalize(torus.norm)[2]) + torus.center;
     inter.norm = rotate(inter.norm,axis,-sqrt(1.0-pow(normalize(torus.norm)[2],2.0)),normalize(torus.norm)[2]);
-    float d = clamp(dot(inter.norm, lightDir), 0.1, 1.0);
-    inter.col = torus.col * d;
+    inter.col = torus.col ;
 
   }
   return ;
@@ -367,7 +353,7 @@ void main( void ) {
 
   Cone cone = Cone(3.0,0.4,vec3(-1.0,0.0,-3.0),vec3(1.0,0.0,1.0),vec3(0.0,0.8,23.3));
 
-  Torus torus = Torus(5.0,2.0,vec3(0.0,0.0,0.0),vec3(0.0,1.0,1.0),vec3(0.0,0.8,23.3));
+  Torus torus = Torus(5.0,1.0,vec3(0.0,0.0,0.0),vec3(0.0,1.0,1.0),vec3(0.0,0.8,23.3));
 
 /*
 struct Torus{
@@ -390,6 +376,7 @@ struct Torus{
   intersection_ellipse(ray,ellipse,inter);
   intersection_cylinder(ray,cylinder,inter);
   intersection_cone(ray,cone,inter);
+  intersection_torus(ray,torus,inter);
 
   //planeとのintersectionの計算
 
