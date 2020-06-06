@@ -268,17 +268,6 @@ void intersection_cone(Ray ray, Cone cone, inout Intersection inter){
 
 void intersection_torus(Ray ray, Torus torus, inout Intersection inter){
 
-  /*
-  struct Torus{
-  float R;
-  float r;
-  vec3 center;
-  vec3 norm;
-  vec3 color;
-  };
-  */
-
-
   //回転操作 + 平行移動
   //まず平行移動
   vec3 ori = ray.ori - torus.center;
@@ -307,15 +296,15 @@ void intersection_torus(Ray ray, Torus torus, inout Intersection inter){
     //交点があった場合
     inter.point = ori + t * dir;
 
-    //TODO: norm の式をかえる
-    inter.norm = normalize(inter.point - vec3(0.0,0.0,inter.point[2]));
+    inter.norm = normalize(inter.point - (torus.R - torus.r) * normalize(vec3(inter.point[0],inter.point[1],0.0)));
 
     //逆回転操作
     //回転操作
     //回転を行うべきは、inter.normとinter.pointだけ
     inter.point = rotate(inter.point,axis,-sqrt(1.0-pow(normalize(torus.norm)[2],2.0)),normalize(torus.norm)[2]) + torus.center;
     inter.norm = rotate(inter.norm,axis,-sqrt(1.0-pow(normalize(torus.norm)[2],2.0)),normalize(torus.norm)[2]);
-    inter.col = torus.col ;
+    float d = clamp(dot(inter.norm, lightDir), 0.1, 1.0);
+    inter.col = torus.col * d;
 
   }
   return ;
@@ -355,14 +344,6 @@ void main( void ) {
 
   Torus torus = Torus(5.0,1.0,vec3(0.0,0.0,0.0),vec3(0.0,1.0,1.0),vec3(0.0,0.8,23.3));
 
-/*
-struct Torus{
-  float R;
-  float r;
-  vec3 center;
-  vec3 norm;
-  vec3 color;
-};*/
 
 
 
