@@ -338,10 +338,10 @@ void compute_intersection(Ray ray, inout Intersection inter){
 
   intersection_sphere(ray,sphere,inter);
   intersection_plane(ray,plane,inter);
-  //intersection_ellipse(ray,ellipse,inter);
-  //intersection_cylinder(ray,cylinder,inter);
-  //intersection_cone(ray,cone,inter);
-  //intersection_torus(ray,torus,inter);
+  intersection_ellipse(ray,ellipse,inter);
+  intersection_cylinder(ray,cylinder,inter);
+  intersection_cone(ray,cone,inter);
+  intersection_torus(ray,torus,inter);
 
   return ;
 }
@@ -352,18 +352,17 @@ void main( void ) {
   vec2 pos = (gl_FragCoord.xy * 2.0 - resolution)/min(resolution.x,resolution.y);
 
   // Ray の定義
-  float rotspeed = 0.1;
+  float rotspeed;
   Ray ray;
   //固定のrayの設定を行う
-  ray.ori = vec3(10.0, 2.0,.0);
-  ray.dir = normalize(-ray.ori+vec3(0.0, 0.0, -1.0) *pos.x*(-5.0) +vec3(0.0, 1.0, 0.0)*pos.y*5.0);
+  //ray.ori = vec3(10.0, 2.0,.0);
+  //ray.dir = normalize(-ray.ori+vec3(0.0, 0.0, -1.0) *pos.x*(-5.0) +vec3(0.0, 1.0, 0.0)*pos.y*5.0);
 
   //回転するようなrayの設定を行う
-  // ray.ori = vec3(sin(time*rotspeed)*10.0, 2.0,cos(time*rotspeed)*10.0);
-  // ray.dir = normalize(-ray.ori+vec3(cos(time*rotspeed),0.0,-sin(time*rotspeed))*pos.x*5.0 +vec3(0.0, 1.0, 0.0)*pos.y*5.0);
+  if(mouse.x > 0.5) rotspeed = 0.3; else rotspeed = -0.3;
+  ray.ori = vec3(sin(time*rotspeed)*10.0, 2.0,cos(time*rotspeed)*10.0);
+  ray.dir = normalize(-ray.ori+vec3(cos(time*rotspeed),0.0,-sin(time*rotspeed))*pos.x*5.0 +vec3(0.0, 1.0, 0.0)*pos.y*5.0);
 
-  //ray.ori = vec3(sin(mouse.x*rotspeed)*10.0, 2.0,cos(mouse*rotspeed)*10.0);
-  //ray.dir = normalize(-ray.ori+vec3(cos(mouse.x*rotspeed),0.0,-sin(mouse.x*rotspeed))*pos.x*5.0 +vec3(0.0, 1.0, 0.0)*pos.y*5.0);
 
   //Sphereの定義
   sphere = Sphere(1.0, vec3(-1.0,0.0,-1.0),vec3(0.,0.8,23.3));
