@@ -83,7 +83,7 @@ function smooth_bilateral(width, height, original, smoothed, sigma_space, sigma_
                 var g1 = original[4 * idx1 + 1];
                 var b1 = original[4 * idx1 + 2];
                 // TODO: take distance between pixel colors at idx0 & idx1, plug it into Gaussian
-                var h_color = Math.sqrt(Math.pow(r1-original[4*idx0],2) + Math.pow(g1-original[4*idx0+1],2) + Math.pow(b1-original[4*idx0],2))
+                var h_color = Math.sqrt(Math.pow(r1-original[4*idx0],2) + Math.pow(g1-original[4*idx0+1],2) + Math.pow(b1-original[4*idx0+2],2));
                 var w_range = Math.exp(-h_color * h_color / (2 * sigma_range * sigma_range));
                 var w = w_space * w_range;
                 r_sum += w * r1;
