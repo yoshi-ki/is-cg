@@ -55,91 +55,95 @@ function smooth_gaussian3D(width, height, nI, original, smoothed, sigma) {
     var r2 = 2 * r + 1;
     // precompute spatial stencil
     var stencil = new Float32Array(r2 * r2 * r2);
-    for (var dz = -r; dz <= r; ++dz)
-    for (var dy = -r; dy <= r; ++dy)
     for (var dx = -r; dx <= r; ++dx)
+    for (var dy = -r; dy <= r; ++dy)
+    for (var dz = -r; dz <= r; ++dz)
     {
         var h = Math.sqrt(dx * dx + dy * dy + dz * dz);
-        var idx = dx + r + r2 * (dy + r) + r2 * r2 * (dz + r);
+        var idx = r2 * r2 * (dx + r) + r2 * (dy + r) + (dz + r);
         stencil[idx] = Math.exp(-h * h / (2 * sigma * sigma));
     }
     // apply filter
+    for (var px = 0; px < height;  px++)
+    for (var py = 0; py < width; py++)
     for (var pz = 0; pz < nI; pz++)
-    for (var py = 0; py < height; py++)
-    for (var px = 0; px < width;  px++)
     {
-        var idx0 = px + width * py + height * width * pz;
+        var idx0 = px * (width * nI) + py * nI + pz;
         var r_sum = 0;
-        var g_sum = 0;
-        var b_sum = 0;
         var w_sum = 0;
-        for (var dz = -r; dz <= r; ++dz)
-        for (var dy = -r; dy <= r; ++dy)
         for (var dx = -r; dx <= r; ++dx)
+        for (var dy = -r; dy <= r; ++dy)
+        for (var dz = -r; dz <= r; ++dz)
         {
             var px1 = px + dx;
             var py1 = py + dy;
             var pz1 = pz + dz;
-            if (0 <= px1 && 0 <= py1 && 0 <= pz1 && px1 < width && py1 < height && pz1 < nI) {
-                var w = stencil[dx + r + r2 * (dy + r) + r2* r2 * (dz + r)];
-                var idx1 = px1 + width * py1 + width * height * pz1;
-                var r1 = original[3 * idx1];
-                var g1 = original[3 * idx1 + 1];
-                var b1 = original[3 * idx1 + 2];
+            if (0 <= px1 && 0 <= py1 && 0 <= pz1 && px1 < height && py1 < width && pz1 < nI) {
+                var w = stencil[r2 * r2 * (dx + r) + r2 * (dy + r) + (dz + r)];
+                var idx1 = px1 * (width * nI) + py1 * nI + pz1;
+                var r1 = original[idx1];
                 r_sum += w * r1;
-                g_sum += w * g1;
-                b_sum += w * b1;
                 w_sum += w;
             }
         }
-        smoothed[3 * idx0    ] = r_sum / w_sum;
-        smoothed[3 * idx0 + 1] = g_sum / w_sum;
-        smoothed[3 * idx0 + 2] = b_sum / w_sum;
+        smoothed[idx0] = r_sum / w_sum;
     }
 };
 function smooth_bilateral(width, height, original, smoothed, sigma_space, sigma_range) {
     // create grid
-    //三次元配列を宣言しないとダメ
     var nh = Math.ceil(height / sigma_space);
     var nw = Math.ceil(width / sigma_space);
     var nI = Math.ceil(255 / sigma_range);
-    console.log(nI);
-    var grid = new Float32Array(nh * nw * nI * 3);
-    grid.fill(0.0);
-    var count = new Array(nh*nw*nI*3);
+    //色別のgridを作成
+    var grid_r = new Float32Array(nh * nw * nI);
+    grid_r.fill(0.0);
+    var grid_g = new Float32Array(nh * nw * nI);
+    grid_g.fill(0.0);
+    var grid_b = new Float32Array(nh * nw * nI);
+    grid_b.fill(0.0);
+    //counter
+    var count = new Array(nh*nw*nI);
     count.fill(0);
     for (var px = 0; px < height;  px++)
     for (var py = 0; py < width; py++)
     {
         var ori_id = px * (width * 4) + py * 4; //px,pyに対応するのは何番目か
         var tempx = Math.round(px/sigma_space);
-        var tempy = Math.round(py/sigma_range);
+        var tempy = Math.round(py/sigma_space);
         var tempz = Math.round(original[ori_id]/sigma_range);
-        var id = tempx * (nh * nI * 3) + tempy * (nI * 3) + tempz * 3;
-        grid[id] += original[ori_id]; //R
-        grid[id+1] += original[ori_id+1]; //G
-        grid[id+2] += original[ori_id+2]; //B
+        var id = tempx * (nw * nI) + tempy * nI + tempz;
+        grid_r[id] += original[ori_id]; //R
+        grid_g[id] += original[ori_id+1]; //G
+        grid_b[id] += original[ori_id+2]; //B
         count[id] += 1;
     }
-    var ngrid = new Float32Array(nh * nw * nI * 3);
-    smooth_gaussian3D(nw,nh,nI,grid,ngrid,1);
-    // console.log(typeof original);
+
+    // //gaussian filterを通す
+    var ngrid_r = new Float32Array(nh * nw * nI);
+    ngrid_r.fill(0.0);
+    var ngrid_g = new Float32Array(nh * nw * nI);
+    ngrid_g.fill(0.0);
+    var ngrid_b = new Float32Array(nh * nw * nI);
+    ngrid_b.fill(0.0);
+    smooth_gaussian3D(nw,nh,nI,grid_r,ngrid_r,1);
+    smooth_gaussian3D(nw,nh,nI,grid_g,ngrid_g,1);
+    smooth_gaussian3D(nw,nh,nI,grid_b,ngrid_b,1);
+
+
     //元に戻す
-    for (var px = 0; px < height;  px++)
+    for (var px = 0; px < height; px++)
     for (var py = 0; py < width; py++)
     {
         var ori_id = px * (width * 4) + py * 4; //px,pyに対応するのは何番目か
         var tempx = Math.round(px/sigma_space);
-        var tempy = Math.round(py/sigma_range);
+        var tempy = Math.round(py/sigma_space);
         var tempz = Math.round(original[ori_id]/sigma_range);
-        var id = tempx * (nh * nI * 3) + tempy * (nI * 3) + tempz * 3;
-        smoothed[ori_id] = ngrid[id] / count[id]; //R
-        smoothed[ori_id+1] = ngrid[id+1] / count[id]; //G
-        smoothed[ori_id+2] = ngrid[id+2] / count[id]; //B
+        var id = tempx * (nw * nI) + tempy * nI + tempz;
+        smoothed[ori_id] = ngrid_r[id] / count[id]; //R
+        smoothed[ori_id+1] = ngrid_g[id] / count[id]; //G
+        smoothed[ori_id+2] = ngrid_b[id] / count[id]; //B
         smoothed[ori_id+3] = 255;
     }
-    console.log(smoothed);
-
 };
 function subtract(width, height, original, smoothed, detail) {
     for (var i = 0; i < width * height; ++i) {
