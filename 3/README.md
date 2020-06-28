@@ -20,6 +20,10 @@
 
 ## joint bilateral filterの実装
 
+  joint bilateral filterの実装を行った。
+
+  https://petal-rocky-caribou-jointbilateral.glitch.me/
+
 ## Bilateral gridの実装
 
   Bilateral gridの実装を行った
