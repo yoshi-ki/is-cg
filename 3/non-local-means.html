@@ -99,8 +99,11 @@ function smooth_bilateral(width, height, original, smoothed, sigma_space, sigma_
     }
 };
 function NL_Means(width, height, original, smoothed, sigma_space) {
+    //gaussian filterのためのr
+    var g_r = Math.ceil(sigma_space * 3);
+    var g_r2 = 2 * g_r + 1;
     //見る場所はrの値を変えると変わる
-    var r = 3;
+    var r = 1;
     var r2 = 2 * r + 1;
 
     //precompute neighbor vectors
@@ -118,9 +121,9 @@ function NL_Means(width, height, original, smoothed, sigma_space) {
         if (0 <= px1 && 0 <= py1 && px1 < width && py1 < height) {
           //値が存在するので、その(px1,py1)のrgbを記録
           var idx1 = px1 + width * py1;
-          nv[place] = original[idx1];
-          nv[place+1] = original[idx1+1];
-          nv[place+2] = original[idx1+2];
+          nv[place] = original[4 * idx1];
+          nv[place+1] = original[4 * idx1+1];
+          nv[place+2] = original[4 * idx1+2];
           place = place + 3;
         }
         else{
@@ -133,6 +136,7 @@ function NL_Means(width, height, original, smoothed, sigma_space) {
       }
     }
 
+
     // apply filter
     for (var py = 0; py < height; py++)
     for (var px = 0; px < width;  px++)
@@ -144,8 +148,9 @@ function NL_Means(width, height, original, smoothed, sigma_space) {
         var w_sum_r = 0;
         var w_sum_g = 0;
         var w_sum_b = 0;
-        for (var dy = -r; dy <= r; ++dy)
-        for (var dx = -r; dx <= r; ++dx)
+        //var w_sum = 0;
+        for (var dy = -g_r; dy <= g_r; ++dy)
+        for (var dx = -g_r; dx <= g_r; ++dx)
         {
             var px1 = px + dx;
             var py1 = py + dy;
@@ -153,21 +158,24 @@ function NL_Means(width, height, original, smoothed, sigma_space) {
                 //var w = stencil[dx + r + r2 * (dy + r)];
                 //gaussian filterの計算を行う(事前計算は不可)
                 //(px,py) と (px1,py1) の内積を計算して、gaussianする
-                var id1 = px + width * py * 3 * r2 * r2;
-                var id2 = px1 + width * py1 * 3 * r2 * r2;
+                var id1 = (px + width * py) * 3 * r2 * r2;
+                var id2 = (px1 + width * py1) * 3 * r2 * r2;
                 var dot_result_r = 0;
                 var dot_result_g = 0;
                 var dot_result_b = 0;
+                //var dot_result = 0;
                 for (var i = 0; i < r2 * r2; ++i){
                   //内積の計算
                   dot_result_r += (nv[id1+ 3 * i    ] - nv[id2+ 3 * i    ]) * (nv[id1+ 3 * i    ] - nv[id2+ 3 * i    ]);
                   dot_result_g += (nv[id1+ 3 * i + 1] - nv[id2+ 3 * i + 1]) * (nv[id1+ 3 * i + 1] - nv[id2+ 3 * i + 1]);
                   dot_result_b += (nv[id1+ 3 * i + 2] - nv[id2+ 3 * i + 2]) * (nv[id1+ 3 * i + 2] - nv[id2+ 3 * i + 2]);
+                  //dot_result += dot_result_r + dot_result_g + dot_result_b;
                 }
                 // expの計算
-                var w_r = Math.exp(-Math.sqrt(dot_result_r) * Math.sqrt(dot_result_r) / (2 * sigma_space * sigma_space));
-                var w_g = Math.exp(-Math.sqrt(dot_result_g) * Math.sqrt(dot_result_g) / (2 * sigma_space * sigma_space));
-                var w_b = Math.exp(-Math.sqrt(dot_result_b) * Math.sqrt(dot_result_b) / (2 * sigma_space * sigma_space));
+                var w_r = Math.exp(-Math.sqrt(dot_result_r) * Math.sqrt(dot_result_r) / (2 * (r2*r2*sigma_space) * (r2*r2*sigma_space)));
+                var w_g = Math.exp(-Math.sqrt(dot_result_g) * Math.sqrt(dot_result_g) / (2 * (r2*r2*sigma_space) * (r2*r2*sigma_space)));
+                var w_b = Math.exp(-Math.sqrt(dot_result_b) * Math.sqrt(dot_result_b) / (2 * (r2*r2*sigma_space) * (r2*r2*sigma_space)));
+                //var w = Math.exp(-Math.sqrt(dot_result) * Math.sqrt(dot_result) / (2 * sigma_space * sigma_space));
                 var idx1 = px1 + width * py1;
                 var r1 = original[4 * idx1];
                 var g1 = original[4 * idx1 + 1];
@@ -178,6 +186,7 @@ function NL_Means(width, height, original, smoothed, sigma_space) {
                 w_sum_r += w_r;
                 w_sum_g += w_g;
                 w_sum_b += w_b;
+                //w_sum += w;
             }
         }
         smoothed[4 * idx0    ] = r_sum / w_sum_r;
