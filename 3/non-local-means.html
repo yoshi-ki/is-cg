@@ -99,17 +99,40 @@ function smooth_bilateral(width, height, original, smoothed, sigma_space, sigma_
     }
 };
 function NL_Means(width, height, original, smoothed, sigma_space) {
-    var r = Math.ceil(sigma_space * 3);
+    //見る場所はrの値を変えると変わる
+    var r = 3;
     var r2 = 2 * r + 1;
-    // precompute spatial stencil
-    var stencil = new Float32Array(r2 * r2);
-    for (var dy = -r; dy <= r; ++dy)
-    for (var dx = -r; dx <= r; ++dx)
+
+    //precompute neighbor vectors
+    var nv = new Array(width * height * 3 * r2 * r2);
+    var place = 0; //値を代入する場所
+    for (var py = 0; py < height; py++)
+    for (var px = 0; px < width;  px++)
     {
-        var h = Math.sqrt(dx * dx + dy * dy);
-        var idx = dx + r + r2 * (dy + r);
-        stencil[idx] = Math.exp(-h * h / (2 * sigma_space * sigma_space));
+      for (var dy = -r; dy <= r; ++dy)
+      for (var dx = -r; dx <= r; ++dx)
+      {
+        //見る位置が(px1,py1)
+        var px1 = px + dx;
+        var py1 = py + dy;
+        if (0 <= px1 && 0 <= py1 && px1 < width && py1 < height) {
+          //値が存在するので、その(px1,py1)のrgbを記録
+          var idx1 = px1 + width * py1;
+          nv[place] = original[idx1];
+          nv[place+1] = original[idx1+1];
+          nv[place+2] = original[idx1+2];
+          place = place + 3;
+        }
+        else{
+          //値が存在しないので、0をいれる
+          nv[place] = 0;
+          nv[place+1] = 0;
+          nv[place+2] = 0;
+          place = place + 3;
+        }
+      }
     }
+
     // apply filter
     for (var py = 0; py < height; py++)
     for (var px = 0; px < width;  px++)
@@ -118,31 +141,48 @@ function NL_Means(width, height, original, smoothed, sigma_space) {
         var r_sum = 0;
         var g_sum = 0;
         var b_sum = 0;
-        var w_sum = 0;
+        var w_sum_r = 0;
+        var w_sum_g = 0;
+        var w_sum_b = 0;
         for (var dy = -r; dy <= r; ++dy)
         for (var dx = -r; dx <= r; ++dx)
         {
             var px1 = px + dx;
             var py1 = py + dy;
             if (0 <= px1 && 0 <= py1 && px1 < width && py1 < height) {
-                var w_space = stencil[dx + r + r2 * (dy + r)];
+                //var w = stencil[dx + r + r2 * (dy + r)];
+                //gaussian filterの計算を行う(事前計算は不可)
+                //(px,py) と (px1,py1) の内積を計算して、gaussianする
+                var id1 = px + width * py * 3 * r2 * r2;
+                var id2 = px1 + width * py1 * 3 * r2 * r2;
+                var dot_result_r = 0;
+                var dot_result_g = 0;
+                var dot_result_b = 0;
+                for (var i = 0; i < r2 * r2; ++i){
+                  //内積の計算
+                  dot_result_r += (nv[id1+ 3 * i    ] - nv[id2+ 3 * i    ]) * (nv[id1+ 3 * i    ] - nv[id2+ 3 * i    ]);
+                  dot_result_g += (nv[id1+ 3 * i + 1] - nv[id2+ 3 * i + 1]) * (nv[id1+ 3 * i + 1] - nv[id2+ 3 * i + 1]);
+                  dot_result_b += (nv[id1+ 3 * i + 2] - nv[id2+ 3 * i + 2]) * (nv[id1+ 3 * i + 2] - nv[id2+ 3 * i + 2]);
+                }
+                // expの計算
+                var w_r = Math.exp(-Math.sqrt(dot_result_r) * Math.sqrt(dot_result_r) / (2 * sigma_space * sigma_space));
+                var w_g = Math.exp(-Math.sqrt(dot_result_g) * Math.sqrt(dot_result_g) / (2 * sigma_space * sigma_space));
+                var w_b = Math.exp(-Math.sqrt(dot_result_b) * Math.sqrt(dot_result_b) / (2 * sigma_space * sigma_space));
                 var idx1 = px1 + width * py1;
                 var r1 = original[4 * idx1];
                 var g1 = original[4 * idx1 + 1];
                 var b1 = original[4 * idx1 + 2];
-                // TODO: take distance between pixel colors at idx0 & idx1, plug it into Gaussian
-                var h_color = Math.sqrt(Math.pow(r1-original[4*idx0],2) + Math.pow(g1-original[4*idx0+1],2) + Math.pow(b1-original[4*idx0+2],2));
-                var w_range = Math.exp(-h_color * h_color / (2 * sigma_range * sigma_range));
-                var w = w_space * w_range;
-                r_sum += w * r1;
-                g_sum += w * g1;
-                b_sum += w * b1;
-                w_sum += w;
+                r_sum += w_r * r1;
+                g_sum += w_g * g1;
+                b_sum += w_b * b1;
+                w_sum_r += w_r;
+                w_sum_g += w_g;
+                w_sum_b += w_b;
             }
         }
-        smoothed[4 * idx0    ] = r_sum / w_sum;
-        smoothed[4 * idx0 + 1] = g_sum / w_sum;
-        smoothed[4 * idx0 + 2] = b_sum / w_sum;
+        smoothed[4 * idx0    ] = r_sum / w_sum_r;
+        smoothed[4 * idx0 + 1] = g_sum / w_sum_g;
+        smoothed[4 * idx0 + 2] = b_sum / w_sum_b;
         smoothed[4 * idx0 + 3] = 255;
     }
 };
@@ -233,7 +273,7 @@ function init() {
     <li>Sigma_Range: <input type="number" id="input_num_sigma_range" step="1" min="1" value="25"></li>
     <li><input type="checkbox" id="input_chk_use_bilateral" checked> Use Bilateral</li>
     <li><button id="btn_do_smoothing">Do Smoothing</button></li>
-    <li>Sigma_Space(for NL means): <input type="number" id="input_num_sigma_space2" step="0.1" min="0" value="2"></li>
+    <li>Sigma_Space(for NL means): <input type="number" id="input_num_sigma_space2" step="0.1" min="0" value="5"></li>
     <li><button id="btn_nl_means">Do NL-means</button></li>
   </ul>
 
