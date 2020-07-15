@@ -48,6 +48,8 @@ function vec_sub(a, b) {
 //Inverse Kinematicsの実装
 function compute_ik(target_position) {
   // TODO
+  for (var c = 0; c <= 10; c++){
+  //反復回数は10回で固定した
   for (var i = linkages.length - 1; i >= 0; i--) {
 
     var base;
@@ -64,6 +66,7 @@ function compute_ik(target_position) {
     var angle = Math.atan2(cross_prod, dot) / Math.PI * 180;
     linkages[i].angle -= angle;
     update_position();
+  }
   }
 };
 
