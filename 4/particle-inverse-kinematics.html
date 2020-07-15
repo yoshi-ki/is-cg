@@ -24,6 +24,10 @@ var linkages = [
 ];
 var is_dragging = false;
 var max_angle = 180;
+var max_length = 0.;
+for(var i = 0; i < linkages.length; i++){
+  max_length = max_length + linkages[i].length;
+}
 
 function update_position() {
   linkages.forEach(function(linkage, index){
@@ -234,6 +238,13 @@ function init() {
     var s2 = vec3.dot(eye_to_origin, plane_normal);
     var eye_to_intersection = vec3.scale([], eye_to_mouse, s2 / s1);
     var target_position = vec3.add([], camera.eye, eye_to_intersection);
+    //入力の制限
+    var dist = calc_dist(target_position,[0.,0.]);
+    if(dist > max_length){
+      var c = max_length / dist;
+      target_position[0] = target_position[0] * c;
+      target_position[1] = target_position[1] * c;
+    }
     compute_ik(target_position);
     draw();
     document.getElementById("input_selected").onchange();
