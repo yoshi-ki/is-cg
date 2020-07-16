@@ -110,23 +110,6 @@ function compute_ik(target_position) {
   //最後に角度についての更新を行う
   update_angle();
 
-  // for (var i = linkages.length - 1; i >= 0; i--) {
-
-  //   var base;
-  //   if (i == 0) base = [0, 0];
-  //   else base = linkages[i-1].position;
-
-  //   var tip = linkages[linkages.length-1].position;
-  //   var a = vec_sub(target_position, base);
-  //   var b = vec_sub(tip, base);
-
-  //   var dot = a[0] * b[0] + a[1] * b[1];
-  //   var cross_prod = a[0] * b[1] - a[1] * b[0];
-  //   //回転方向も含めて角度を求める方法
-  //   var angle = Math.atan2(cross_prod, dot) / Math.PI * 180;
-  //   linkages[i].angle -= angle;
-  //   update_position();
-  // }
 };
 
 function draw() {
