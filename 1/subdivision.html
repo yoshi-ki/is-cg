@@ -115,21 +115,28 @@ function subdivide() {
         }
     });
 
+
     // for each vertex, compute displaced point
     mesh_subdiv.vertices.forEach(function(v){
-        if (v.is_boundary()) {
-            var w0 = v.halfedge.prev.from_vertex();
-            var w1 = v.halfedge.vertex;
-            v.subdiv_point = vec3.add([],
-                vec3.scale([], v.point, 3 / 4),
-                vec3.scale([], vec3.add([], w0.point, w1.point), 1 / 8));
-        } else {
-            var w = v.vertices();
-            var alpha = Math.pow(3 / 8 + 1 / 4 * Math.cos(2 * Math.PI / w.length), 2) + 3 / 8;
-            v.subdiv_point = vec3.scale([], v.point, alpha);
-            for (var i = 0; i < w.length; ++i)
-                v.subdiv_point = vec3.add([], v.subdiv_point, vec3.scale([], w[i].point, (1 - alpha) / w.length));
-        }
+      var Q = [0.,0.,0.];
+      var R = [0.,0.,0.];
+
+      var n = v.faces().length;
+      
+      v.faces().forEach(function(f){
+        vec3.add(Q,Q,f.subdiv_point);
+      });
+      vec3.scale(Q,Q,1/n);
+
+      v.vertices().forEach(function(w){
+        vec3.add(R,R,w.subdiv_point);
+      });
+      vec3.scale(R,R,1/n);
+
+      // P = Q/n + 2R/n + (n-3)A/n
+      vec3.scale(Q,Q,1/n);
+      vec3.scale(R,R,2/n);
+      v.subdiv_point = vec3.add([], Q, vec3.add([], R, (vec3.sacle([], v.point, (n-3)/n))));
     });
 
 
