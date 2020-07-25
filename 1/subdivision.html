@@ -2,7 +2,7 @@
 <html xmlns="http://www.w3.org/1999/xhtml">
 <head>
 <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
-<title id="title">[utokyo-iscg-2020] Advanced Assignment M2 (Subdivision)</title>
+<title id="title">Assignment M2 Subdivision surface </title>
 <script src="https://rawcdn.githack.com/toji/gl-matrix/v3.3.0/dist/gl-matrix-min.js"></script>
 <script src="https://bbcdn.githack.com/kenshi84/legacygl.js/raw/master/gl-matrix-util.js"></script>
 <script src="https://bbcdn.githack.com/kenshi84/legacygl.js/raw/master/legacygl.js"></script>
@@ -96,24 +96,23 @@ function draw() {
 function subdivide() {
 
 
-    // for each face, compute subdivided point
-    mesh_subdiv.faces.forEach(function(f){
-      f.subdiv_point = f.centroid();
-    })
 
 
     // for each edge, compute subdivided point
     mesh_subdiv.edges_forEach(function(e){
         var v = e.vertices();
         var f = e.faces();
-        if (e.is_boundary()) {
-            e.subdiv_point = vec3.scale([], vec3.add([], v[0].point, v[1].point), 0.5);
-        } else {
-            e.subdiv_point = vec3.add([],
+        
+        e.subdiv_point = vec3.add([],
                 vec3.scale([], vec3.add([], v[0].point, v[1].point), 1 / 4),
-                vec3.scale([], vec3.add([], f[0].centroid(), f[1].centroid()), 1 / 4))
-        }
+                vec3.scale([], vec3.add([], f[0].centroid(), f[1].centroid()), 1 / 4));
     });
+
+
+    // for each face, compute subdivided point
+    mesh_subdiv.faces.forEach(function(f){
+      f.subdiv_point = f.centroid();
+    })
 
 
     // for each vertex, compute displaced point
@@ -398,6 +397,18 @@ function init() {
 
   <div class="glitchButton" style="position:fixed;top:20px;right:20px;"></div>
   <script src="https://button.glitch.me/button.js"></script>
+
+   <h3>
+    説明
+  </h3>
+    Catmull Clark法でsubdivision surfaceを実装した。まず、legacyglのQUADSを用いるようにする。これは、四角形を描画するもので、四角形を二つの三角形に分けて描画するものである。
+    まず、それぞれの辺について、それを共有するポリゴン二つの重心の平均とそれ自身の中天の平均をとった位置に頂点を生成する。
+    それぞれのポリゴンについて、その重心をsubvidisionする点として頂点を生成する。
+    最後に各頂点について、P = Q/n + 2R/n + (n-3)A/nとして頂点を生成する。
+    Qは頂点周りのポリゴンの重心を表していて、Rは頂点を含むedgeの中点の平均を表している。
+    最後に、half edge data構造にこの結果を代入して次のsubdivisionを生成する。
+
+
 </body>
 </html>
 
