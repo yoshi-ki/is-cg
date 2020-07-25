@@ -129,14 +129,14 @@ function subdivide() {
       vec3.scale(Q,Q,1/n);
 
       v.vertices().forEach(function(w){
-        vec3.add(R,R,w.subdiv_point);
+        vec3.add(R,R,w.point);
       });
       vec3.scale(R,R,1/n);
 
       // P = Q/n + 2R/n + (n-3)A/n
       vec3.scale(Q,Q,1/n);
       vec3.scale(R,R,2/n);
-      v.subdiv_point = vec3.add([], Q, vec3.add([], R, (vec3.sacle([], v.point, (n-3)/n))));
+      v.subdiv_point = vec3.add([], Q, vec3.add([], R, (vec3.scale([], v.point, (n-3)/n))));
     });
 
 
@@ -144,22 +144,20 @@ function subdivide() {
     // make next subdiv mesh topology
     var mesh_subdiv_next = make_halfedge_mesh();
 
+    //subdivisionの頂点の数
     var offset1 = mesh_subdiv.num_vertices();
-    var offset2 = mesh_subdiv.num_edges();
-
+    var offset2 = offset1 + mesh_subdiv.num_edges();
+    
+    //add face
     mesh_subdiv.faces.forEach(function(f){
         f.halfedges().forEach(function(h){
+            // fv_indicesは新たに付け加えるfaceのindexが入る
             var fv_indices = [h.from_vertex().id];
             fv_indices.push(offset1 + h.edge.id);
             fv_indices.push(offset2 + f.id);
             fv_indices.push(offset1 + h.prev.edge.id);
             mesh_subdiv_next.add_face(fv_indices);
         });
-        var fv_indices = [];
-        f.edges().forEach(function(e){
-            fv_indices.push(offset1 + e.id);
-        });
-        mesh_subdiv_next.add_face(fv_indices);
     });
 
     // set geometry for the next subdiv mesh (set subdiv-points)
@@ -169,7 +167,7 @@ function subdivide() {
     mesh_subdiv.edges_forEach(function(e){
         mesh_subdiv_next.vertices[offset1 + e.id].point = e.subdiv_point;
     });
-    mesh_subdiv.faces_forEach(function(f){
+    mesh_subdiv.faces.forEach(function(f){
         mesh_subdiv_next.vertices[offset2+f.id].point = f.subdiv_point;
     });
     mesh_subdiv = mesh_subdiv_next;
