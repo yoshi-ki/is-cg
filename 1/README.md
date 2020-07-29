@@ -28,5 +28,8 @@
   
   ベジェ曲面の実装を行った。
 
+## subdivision surfaceの実装　catmull-clark
 
+  https://pewter-brawny-leech-subdivision-surface.glitch.me/
 
+  subdivision surfaceのCatmull-clark法の実装を行った
