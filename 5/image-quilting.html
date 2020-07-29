@@ -16,7 +16,7 @@ var overlap = 4;
 
 function synthesize(width, height, original, synthesized) {
     //まず、randomに選び、textureを作成する
-    var subtexture = 4 //もとのtextureを4つに分けた大きさで作成
+    var subtexture = 4; //もとのtextureを4つに分けた大きさで作成
     for (var i = 0; i < texture_num * subtexture; i++){
       for (var j = 0; j < texture_num * subtexture; j++){
         //座標(start_x,start_y)を始めとした16*16がこのiterationでは代入される
@@ -47,7 +47,7 @@ function synthesize(width, height, original, synthesized) {
 
 function synthesize2(width, height, original, synthesized) {
     //まず、randomに選び、textureを作成する
-    var subtexture = 4 //もとのtextureを4つに分けた大きさで作成
+    var subtexture = 4; //もとのtextureを4つに分けた大きさで作成
     for (var i = 0; i < texture_num * subtexture; i++){
       for (var j = 0; j < texture_num * subtexture; j++){
         //座標(start_x,start_y)を始めとした16*16がこのiterationでは代入される
@@ -58,7 +58,9 @@ function synthesize2(width, height, original, synthesized) {
         // randomにcopyもとの座標を選ぶ
         // 5 - 47の範囲で発生させる
         var flag;
+        var count = 0; // 妥協回数
         do{
+            count++;
             flag = true;
             //乱数チェックと
             var rx = Math.floor(Math.random() * (width - (width/subtexture) - 5) + 5);
@@ -67,26 +69,46 @@ function synthesize2(width, height, original, synthesized) {
 
             //横方向のチェック
             if(i != 0){
-            for (var k = 0; k < (height/subtexture); k++){
-                for (var l = 0; l < (width/subtexture); l++){
-                    //neighbor判定を行う
-                    var idx = idx0 + (l + k * width * texture_num);
-                    var idr = idr0 + (l + k * width);
-                    synthesized[4 * idx    ] = original[4 * idr    ];
-                    synthesized[4 * idx + 1] = original[4 * idr + 1];
-                    synthesized[4 * idx + 2] = original[4 * idr + 2];
-                    synthesized[4 * idx + 3] = 255;
+                var tempsum = 0;
+                var idx00 = (start_x - overlap) + start_y * width * texture_num;
+                var idr00 = (rx - overlap) + ry * width;
+
+                for (var k = 0; k < overlap; k++){
+                    for (var l = 0; l < (width/subtexture); l++){
+                        //neighbor判定を行う
+                        var idx = idx00 + (l + k * width * texture_num);
+                        var idr = idr00 + (l + k * width);
+                        tempsum += Math.sqrt(Math.pow((synthesized[4 * idx    ] - original[4 * idr    ]),2));
+                        tempsum += Math.sqrt(Math.pow((synthesized[4 * idx + 1] - original[4 * idr + 1]),2));
+                        tempsum += Math.sqrt(Math.pow((synthesized[4 * idx + 2] - original[4 * idr + 2]),2));
+                    }
                 }
-            }
+                if (tempsum > 10000) flag = false;
             }
 
             //上方向のチェック
             if(j != 0){
+                var tempsum = 0;
+                var idx00 = start_x + (start_y - overlap)* width * texture_num;
+                var idr00 = rx + (ry - overlap) * width;
 
+                for (var k = 0; k < (height/subtexture); k++){
+                    for (var l = 0; l < overlap; l++){
+                        //neighbor判定を行う
+                        var idx = idx00 + (l + k * width * texture_num);
+                        var idr = idr00 + (l + k * width);
+                        tempsum += Math.sqrt(Math.pow((synthesized[4 * idx    ] - original[4 * idr    ]),2));
+                        tempsum += Math.sqrt(Math.pow((synthesized[4 * idx + 1] - original[4 * idr + 1]),2));
+                        tempsum += Math.sqrt(Math.pow((synthesized[4 * idx + 2] - original[4 * idr + 2]),2));
+                    }
+                }
+                if (tempsum > 10000) flag = false;
 
             }
+            console.log(flag);
+            if (count > 3000) flag = true;
         }
-        while(flag);
+        while(!flag);
 
         for (var k = 0; k < (height/subtexture); k++){
           for (var l = 0; l < (width/subtexture); l++){
