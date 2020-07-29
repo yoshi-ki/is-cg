@@ -1,0 +1,90 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+<title id="title">texture synthesys</title>
+<script type="text/javascript">
+var canvas = document.createElement("canvas");
+var canvas2 = document.createElement("canvas");
+var context = canvas.getContext("2d");
+var context2 = canvas2.getContext("2d");
+//synthesize(width, height, original.data, synthesized.data, texture_num, overlap);
+function synthesize(width, height, original, synthesized, texture_num, overlap) {
+    //まず、randomに選び、textureを作成する
+
+    for (var i = 0; i < texture_num; i++){
+      for (var j = 0; j < texture_num; j++){
+        //このiterationでは、i * width, j * height分のtextureについての描画がされる
+        var start_x = i * width;
+        var start_y = j * height;
+        var idx0 = (start_x + start_y * width * texture_num);
+        for (var k = 0; k < height; k++){
+          for (var l = 0; l < width; l++){
+            var idx = idx0 + (l + k * width * texture_num);
+            synthesized[4 * idx    ] = original[4 * (l + k * width)    ];
+            synthesized[4 * idx + 1] = original[4 * (l + k * width) + 1];
+            synthesized[4 * idx + 2] = original[4 * (l + k * width) + 2];
+            synthesized[4 * idx + 3] = 255;
+          }
+        }
+      }
+    }
+};
+function init() {
+    document.getElementById("img_original").onload = function(){
+        var texture_num = Number(document.getElementById("input_texture_num").value);
+        canvas.width  = this.width;
+        canvas.height = this.height;
+        canvas2.width  = this.width * texture_num;
+        canvas2.height = this.height * texture_num;
+        document.getElementById("img_result"  ).width  = texture_num * this.width;
+        document.getElementById("img_result"  ).height = texture_num * this.height;
+    };
+    document.getElementById("input_file_original").onchange = function(evt) {
+        var reader = new FileReader();
+        reader.readAsDataURL(evt.target.files[0]);
+        reader.onload = function(){
+            document.getElementById("img_original").src = this.result;
+        };
+    };
+    document.getElementById("btn_do_synthesize").onclick = function() {
+        // parameterの調整
+        var width = canvas.width;
+        var height = canvas.height;
+        var texture_num = Number(document.getElementById("input_texture_num").value);
+        document.getElementById("img_result"  ).width  = texture_num * width;
+        document.getElementById("img_result"  ).height = texture_num * height;
+        var overlap = Number(document.getElementById("input_overlap").value);
+
+        // read original
+        context.drawImage(document.getElementById("img_original"), 0, 0);
+        var original = context.getImageData(0, 0, width, height);
+        // do synthesizing
+        var synthesized = context2.createImageData(texture_num * width, texture_num * height);
+        // ここでjointを行う
+        synthesize(width, height, original.data, synthesized.data, texture_num, overlap);
+        context2.putImageData(synthesized, 0, 0);
+        document.getElementById("img_result").src = canvas2.toDataURL();
+    };
+    document.getElementById("img_original").src = "https://cdn.glitch.com/f065ea62-a8fe-47cd-b5b2-9b44e13dc84d%2Ftexture-ss.png?v=1596026069143";
+};
+</script>
+</head>
+<body onload="init()">
+  <h2><a target="_blank" href="http://research.nii.ac.jp/~takayama/teaching/utokyo-iscg-2020/"><script type="text/javascript">document.write(document.getElementById("title").innerHTML);</script></a></h2>
+  <table><tr valign="top">
+    <td align="center"><img id="img_original" crossorigin="anonymous"><br>Original</td>
+    <td align="center"><img id="img_result"><br>result</td>
+  </tr></table>
+  <ul>
+    <li>Load Image: <input type="file" id="input_file_original" accept="image/*"></li>
+    <li>number of texture: <input type="number" id="input_texture_num" step="1" min="1" value="3"></li>
+    <li>size of overlap: <input type="number" id="input_overlap" step="1" min="1" value="8"></li>
+
+    <li><button id="btn_do_synthesize">synthesize</button></li>
+  </ul>
+
+  <div class="glitchButton" style="position:fixed;top:20px;right:20px;"></div>
+  <script src="https://button.glitch.me/button.js"></script>
+</body>
+</html>
