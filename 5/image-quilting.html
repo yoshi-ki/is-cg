@@ -13,10 +13,10 @@ var context2 = canvas2.getContext("2d");
 var context3 = canvas3.getContext("2d");
 var context4 = canvas4.getContext("2d");
 
-var texture_num = 2;
+var texture_num = 4;
 var overlap = 4;
-var subtexture = 2; //もとのtextureを4つに分けた大きさでサンプル
-var maxerr = 30000; //errorをどの程度まで許容するか
+var subtexture = 4; //もとのtextureを4つに分けた大きさでサンプル
+var maxerr = 10000; //errorをどの程度まで許容するか
 var maxitr = 12000; //iteration回数の上限
 
 
@@ -341,5 +341,24 @@ function init() {
 
   <div class="glitchButton" style="position:fixed;top:20px;right:20px;"></div>
   <script src="https://button.glitch.me/button.js"></script>
+  <h3>
+    説明
+  </h3>
+    image quiltingという手法を用いて、テクスチャ合成を行った。実装に関するパラメータは以下を用意した。
+    texture_numはどれくらいの大きさのtextureを生成するかを表す変数である。
+    overlapはneighbor判定で用いる領域の大きさである。
+    subtextureは、生成もとのtextureからどの程度のサイズのサンプルを取ってくるか（2であれば、もとのサイズの0.5のサンプルを取ってくる）を表す。
+    maxerrはneighbor判定で、どの程度の誤差まで許容するかを表す変数。
+    maxitrは、neighbor判定のループの上限回数を表す変数。
+    <br>
+    <br>
+    実装については、三つを行った。まず、一つ目が、ランダムの結果を出力するもので、synthesize関数で実装されている。
+    <br>
+    二つ目は、neighbor判定を行うもので、textureをrandomに取ってくるが、その位置に適したものであるかを近傍のすでに置かれたtextureと比べて、近傍とあまりにも離れたものであれば、randomに再度取り直すものである。
+    今回は、二乗和誤差を用いて判定を行っている。この実装はsynthesized2関数を用いて行った。
+    <br>
+    三つ目は、neighbor判定を行っても、隣接する二つのtextureについて境界線がくっきりと浮き上がってしまうので、min squared errorが最小となる部分を境界として設定するものである。
+    その実装はsynthesized3関数を用いて行った。
+
 </body>
 </html>
