@@ -13,9 +13,12 @@ var context2 = canvas2.getContext("2d");
 var context3 = canvas3.getContext("2d");
 var context4 = canvas4.getContext("2d");
 
-var texture_num = 4;
+var texture_num = 2;
 var overlap = 4;
-var subtexture = 4; //もとのtextureを4つに分けた大きさでサンプル
+var subtexture = 2; //もとのtextureを4つに分けた大きさでサンプル
+var maxerr = 30000; //errorをどの程度まで許容するか
+var maxitr = 12000; //iteration回数の上限
+
 
 function synthesize(width, height, original, synthesized) {
     //まず、randomに選び、textureを作成する
@@ -83,7 +86,7 @@ function synthesize2(width, height, original, synthesized) {
                         tempsum += Math.sqrt(Math.pow((synthesized[4 * idx + 2] - original[4 * idr + 2]),2));
                     }
                 }
-                if (tempsum > 10000) flag = false;
+                if (tempsum > maxerr) flag = false;
             }
 
             //上方向のチェック
@@ -102,11 +105,10 @@ function synthesize2(width, height, original, synthesized) {
                         tempsum += Math.sqrt(Math.pow((synthesized[4 * idx + 2] - original[4 * idr + 2]),2));
                     }
                 }
-                if (tempsum > 10000) flag = false;
+                if (tempsum > maxerr) flag = false;
 
             }
-            console.log(flag);
-            if (count > 3000) flag = true;
+            if (count > maxitr) flag = true;
         }
         while(!flag);
 
@@ -162,7 +164,7 @@ function synthesize3(width, height, original, synthesized) {
                         tempsum += Math.sqrt(Math.pow((synthesized[4 * idx + 2] - original[4 * idr + 2]),2));
                     }
                 }
-                if (tempsum > 10000) flag = false;
+                if (tempsum > maxerr) flag = false;
             }
 
             //上方向のチェック
@@ -181,10 +183,10 @@ function synthesize3(width, height, original, synthesized) {
                         tempsum += Math.sqrt(Math.pow((synthesized[4 * idx + 2] - original[4 * idr + 2]),2));
                     }
                 }
-                if (tempsum > 10000) flag = false;
+                if (tempsum > maxerr) flag = false;
 
             }
-            if (count > 3000) flag = true;
+            if (count > maxitr) flag = true;
         }
         while(!flag);
 
@@ -206,10 +208,10 @@ function synthesize3(width, height, original, synthesized) {
             var idx00 = (start_x - overlap) + start_y * width * texture_num;
             var idr00 = (rx - overlap) + ry * width;
 
-            for (var l = 0; l < (width/subtexture); l++){
+            for (var k = 0; k < (width/subtexture); k++){
                 var error = Infinity;
                 var place = 0; //最小となった場所を記録する
-                for (var k = 0; k < overlap; k++) {
+                for (var l = 0; l < overlap; l++) {
                     //neighbor判定を行う
                     var idx = idx00 + (l + k * width * texture_num);
                     var idr = idr00 + (l + k * width);
@@ -217,9 +219,9 @@ function synthesize3(width, height, original, synthesized) {
                     tempsum += Math.sqrt(Math.pow((synthesized[4 * idx    ] - original[4 * idr    ]),2));
                     tempsum += Math.sqrt(Math.pow((synthesized[4 * idx + 1] - original[4 * idr + 1]),2));
                     tempsum += Math.sqrt(Math.pow((synthesized[4 * idx + 2] - original[4 * idr + 2]),2));
-                    if(error > tempsum) place = k;
+                    if(error > tempsum) {place = l; error = tempsum;}
                 }
-                for(var k = place; k < overlap; k++) {
+                for(var l = place; l < overlap; l++) {
                     var idx = idx00 + (l + k * width * texture_num);
                     var idr = idr00 + (l + k * width);
                     synthesized[4 * idx    ] = original[4 * idr    ];
@@ -229,25 +231,25 @@ function synthesize3(width, height, original, synthesized) {
             }
         }
 
-        //上方向のチェック
+        //上方向の修正
         if(j != 0){
-            var tempsum = 0;
             var idx00 = start_x + (start_y - overlap)* width * texture_num;
             var idr00 = rx + (ry - overlap) * width;
 
-            for (var k = 0; k < (height/subtexture); k++){
+            for (var l = 0; l < (width/subtexture); l++){
                 var error = Infinity;
                 var place = 0; //最小となった場所を記録する
-                for (var l = 0; l < overlap; l++){
+                for (var k = 0; k < overlap; k++){
                     //neighbor判定を行う
                     var idx = idx00 + (l + k * width * texture_num);
                     var idr = idr00 + (l + k * width);
+                    var tempsum = 0;
                     tempsum += Math.sqrt(Math.pow((synthesized[4 * idx    ] - original[4 * idr    ]),2));
                     tempsum += Math.sqrt(Math.pow((synthesized[4 * idx + 1] - original[4 * idr + 1]),2));
                     tempsum += Math.sqrt(Math.pow((synthesized[4 * idx + 2] - original[4 * idr + 2]),2));
-                    if(error > tempsum) place = l;
+                    if(error > tempsum) {place = k; error = tempsum;}
                 }
-                for (var l = place; l < overlap; l++){
+                for (var k = place; k < overlap; k++){
                     //neighbor判定を行う
                     var idx = idx00 + (l + k * width * texture_num);
                     var idr = idr00 + (l + k * width);
@@ -307,7 +309,7 @@ function init() {
 
 
         var synthesized2 = context3.createImageData(texture_num * width, texture_num * height);
-        synthesize(width,height,original.data,synthesized2.data);
+        synthesize2(width,height,original.data,synthesized2.data);
         context3.putImageData(synthesized2,0,0);
         document.getElementById("img_neighbor_result").src = canvas3.toDataURL();
 
