@@ -8,7 +8,7 @@
 
 ## Image Quiltingの実装
 
-  テクスチャ合成の手法の一つであるimage quiltingについて実装を行った。
+  テクスチャ合成の手法の一つであるimage quilting(https://people.eecs.berkeley.edu/~efros/research/quilting/quilting.pdf)について実装を行った。
 
 
 
