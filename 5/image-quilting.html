@@ -291,9 +291,31 @@ function init() {
         };
     };
     document.getElementById("btn_do_synthesize").onclick = function() {
+        //parameterの代入
+        texture_num = Number(document.getElementById("input_num_texture_num").value);
+        overlap = Number(document.getElementById("input_num_overlap").value);
+        subtexture = Number(document.getElementById("input_num_subtexture").value);
+        maxerr = Number(document.getElementById("input_num_maxerr").value);
+        maxitr = Number(document.getElementById("input_num_maxitr").value);
+
         // parameterの調整
         var width = canvas.width;
         var height = canvas.height;
+        canvas.width  = width;
+        canvas.height = height;
+        canvas2.width  = width * texture_num;
+        canvas2.height = height * texture_num;
+        canvas3.width  = width * texture_num;
+        canvas3.height = height * texture_num;
+        canvas4.width  = width * texture_num;
+        canvas4.height = height * texture_num;
+        document.getElementById("img_random_result"  ).width  = texture_num * width;
+        document.getElementById("img_random_result"  ).height = texture_num * height;
+        document.getElementById("img_neighbor_result"  ).width  = texture_num * width;
+        document.getElementById("img_neighbor_result"  ).height = texture_num * height;
+        document.getElementById("img_result"  ).width  = texture_num * width;
+        document.getElementById("img_result"  ).height = texture_num * height;
+
         // read original
         context.drawImage(document.getElementById("img_original"), 0, 0);
         var original = context.getImageData(0, 0, width, height);
@@ -335,6 +357,11 @@ function init() {
   </tr></table>
   <ul>
     <li>Load Image: <input type="file" id="input_file_original" accept="image/*"></li>
+    <li>texture_num: <input type="number" id="input_num_texture_num" step="1" value="4"></li>
+    <li>overlap: <input type="number" id="input_num_overlap" step="1" value="4"></li>
+    <li>subtexture: <input type="number" id="input_num_subtexture" step="1" min="1" value="4"></li>
+    <li>maxerr: <input type="number" id="input_num_maxerr" step="1" min="1" value="10000"></li>
+    <li>maxitr: <input type="number" id="input_num_maxitr" step="1" min="1" value="12000"></li>
 
     <li><button id="btn_do_synthesize">synthesize</button></li>
   </ul>
@@ -345,10 +372,16 @@ function init() {
     説明
   </h3>
     image quiltingという手法を用いて、テクスチャ合成を行った。実装に関するパラメータは以下を用意した。
-    texture_numはどれくらいの大きさのtextureを生成するかを表す変数である。
-    overlapはneighbor判定で用いる領域の大きさである。
-    subtextureは、生成もとのtextureからどの程度のサイズのサンプルを取ってくるか（2であれば、もとのサイズの0.5のサンプルを取ってくる）を表す。
+    <br>
+    texture_numはどれくらいの大きさのtextureを生成するかを表す変数である。一辺の長さがもとの画像のtexture_num倍のtextureを生成する。
+    <br>
+    overlapはneighbor判定で用いる領域の大きさである。もとの画像サイズの一辺/texture_numを超える数を入力するべきではない。
+    <br>
+    subtextureは、生成もとのtextureからどの程度のサイズのサンプルを取ってくるか（2であれば、もとのサイズの0.5のサンプルを取ってくる）を表す。もとの画像サイズの約数であることが望まれる。サンプルでは、2,4,8の値が望まれる。
+    <br>
     maxerrはneighbor判定で、どの程度の誤差まで許容するかを表す変数。
+    上記変数によって値が変わってしまうので、適度に調節する必要がある。
+    <br>
     maxitrは、neighbor判定のループの上限回数を表す変数。
     <br>
     <br>
