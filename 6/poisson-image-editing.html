@@ -259,6 +259,7 @@ window.onload = function() {
     document.getElementById("input_num_offset_x").onchange = function() { init_result(); };
     document.getElementById("input_num_offset_y").onchange = function() { init_result(); };
     document.getElementById("btn_iterate").onclick = function() {
+        init_result();
         var offset_x = Number(document.getElementById("input_num_offset_x").value);
         var offset_y = Number(document.getElementById("input_num_offset_y").value);
         var numiter  = Number(document.getElementById("input_num_numiter" ).value);
